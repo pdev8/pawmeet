@@ -58,7 +58,7 @@ interface OverpassWay {
   geometry?: { lat: number; lon: number }[];
 }
 
-function categorize(tags: Record<string, string>): PlaceCategory | null {
+export function categorize(tags: Record<string, string>): PlaceCategory | null {
   if (tags.leisure === 'dog_park') return 'dog_park';
   if (tags.natural === 'beach') return 'beach';
   if (tags.leisure === 'nature_reserve') return 'nature_reserve';
@@ -68,7 +68,7 @@ function categorize(tags: Record<string, string>): PlaceCategory | null {
   return null;
 }
 
-function ringAreaM2(pts: MapPoint[]): number {
+export function ringAreaM2(pts: MapPoint[]): number {
   if (pts.length < 3) return 0;
   const lat0 = pts[0].latitude;
   const mLat = 111132;

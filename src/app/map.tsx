@@ -33,8 +33,8 @@ import {
   placeRating,
   type DogPlace,
   type PlaceCategory,
-  type PlaceReview,
 } from '@/lib/places';
+import { blendedRating, mergeReviews, stars } from '@/lib/reviews';
 import { useStore } from '@/lib/store';
 
 // One distinct hue per category so a filter chip visually matches the areas it
@@ -58,11 +58,6 @@ const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as PlaceCategory[];
 const MAX_HATCHED = 22;
 // The biggest areas (plus every dog park) get a Pawk pin for legibility.
 const MAX_LOGO_PINS = 8;
-
-function stars(rating: number): string {
-  const full = Math.round(rating);
-  return '★'.repeat(full) + '☆'.repeat(5 - full);
-}
 
 export default function MapScreen() {
   const p = usePalette();
@@ -183,30 +178,12 @@ export default function MapScreen() {
 
   // My own reviews (persisted) show first, then the demo community reviews.
   // The headline rating blends both so a place reacts to what I leave.
-  // My reviews (newest first) show at the top, then the demo community reviews.
-  // Each carries its stored id + `mine` so its row can offer edit / delete.
+  // My reviews (newest first, flagged for edit/delete) above the demo community
+  // reviews; the headline rating blends both. See src/lib/reviews.ts.
   const myReviews = selected ? store.placeReviews[selected.id] ?? [] : [];
   const demoList = selected ? demoReviews(selected, reviewers) : [];
-  const reviews: (PlaceReview & { reviewId?: string; mine?: boolean })[] = [
-    ...[...myReviews].reverse().map((r) => ({
-      reviewId: r.id,
-      mine: true,
-      author: store.users[r.authorId]?.displayName ?? 'You',
-      avatarUrl: store.users[r.authorId]?.avatarUrl ?? '',
-      rating: r.rating,
-      text: r.text,
-      when: 'Just now',
-    })),
-    ...demoList,
-  ];
-  const rating =
-    selected && demoList.length + myReviews.length > 0
-      ? (placeRating(selected) * demoList.length +
-          myReviews.reduce((sum, r) => sum + r.rating, 0)) /
-        (demoList.length + myReviews.length)
-      : selected
-        ? placeRating(selected)
-        : 0;
+  const reviews = selected ? mergeReviews(myReviews, demoList, store.users) : [];
+  const rating = selected ? blendedRating(placeRating(selected), demoList.length, myReviews) : 0;
 
   const canReview = myRating >= 1 && myText.trim().length > 0;
 
