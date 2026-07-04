@@ -1,0 +1,146 @@
+# Pawk — Backlog
+
+Agile backlog for taking Pawk from the v1 mock-data demo toward the full
+[SPEC.md](SPEC.md) scope. Current state: discover / post / RSVP / comment
+flows + the dog-friendly map & place reviews are built on a **local mock
+store** (zustand). The main gaps are SPEC M3: backend, auth, push, saved
+searches, moderation, and onboarding.
+
+**Legend:** 🟢 independent (grab anytime) · 🔴 blocks/unblocks others · ⭐ suggested next · 🚫 App Store submission blocker (Apple rejects without it)
+
+---
+
+## EPIC 1 — Backend & Auth  🔴 (unblocks most "real data" work)
+- [ ] Decide backend: Supabase (Postgres + PostGIS) vs Firebase
+- [ ] Stand up schema: users, pets, events, rsvps, comments, place_reviews, reports
+- [ ] Sign in with Apple + email auth  🚫 (SiwA required once email login is offered)
+- [ ] In-app account deletion flow  🚫 (Apple requires it for any app with sign-up)
+- [ ] Swap zustand mock store → real data layer (TanStack Query for server cache)
+- [ ] Replace mock timers (host approval ~6s, canned replies ~7s) with real writes
+- [ ] PostGIS radius search (ST_DWithin) to replace client-side haversine
+- [ ] Scheduled archival job (pg_cron hourly, archives events >24h past ends_at)
+
+## EPIC 2 — Map & Places  🟢
+- [ ] Persist filter selections across sessions
+- [ ] Cluster pins when zoomed out (many places overlap)
+- [ ] Cache Overpass results so re-opening the map isn't a cold fetch
+- [ ] Loading / empty / error states polish for "search this area"
+- [ ] Show event pins on the map (tie Discover events → map), not just POIs
+- [ ] Legend / key for the category colors
+
+## EPIC 3 — Place Reviews (extend what's built)  🟢 ⭐
+- [ ] Persist reviews to backend (currently on-device only)
+- [ ] Real relative timestamps instead of "Just now"
+- [ ] Show review count next to the star rating
+- [ ] Attach a photo to a review
+- [ ] Report / flag a review (ties into moderation epic)
+
+## EPIC 4 — Discovery / Search  🟢 ⭐
+- [ ] "Has spots left" toggle
+- [ ] Map ⇄ list toggle on the Discover screen
+- [ ] Saved searches ("goldens within 25 mi") — the retention hook
+- [ ] Real place geocoding for search (MapKit / Nominatim)
+- [ ] Empty-state CTA: "host the first event in this area"
+
+## EPIC 5 — Post / Host an Event  🟢
+- [ ] Address autocomplete (MapKit search) in the Where step
+- [ ] Real cover-photo upload (currently placedog.net)
+- [ ] Edit event (notify attendees of time/place changes)
+- [ ] Host dashboard: attendee + pet list, headcount incl. dogs
+
+## EPIC 6 — RSVP & Attendance  🟢
+- [ ] Choose which pet(s) you're bringing on RSVP
+- [ ] Add-to-calendar from event detail
+- [ ] New-account friction for hosting backyard events (attended 1 / verified phone)
+
+## EPIC 7 — Comments  🟢
+- [ ] Realtime new comments while the event screen is open
+- [ ] "Host" / "Going" author context chips
+- [ ] Rate limit + 1000-char cap enforcement
+- [ ] Report a comment
+
+## EPIC 8 — Notifications & Push  🔴 (needs backend)
+- [ ] Expo Notifications + APNs setup
+- [ ] Event reminders (24h + 2h before)
+- [ ] Push: RSVP approved, waitlist promoted, event changed / cancelled
+- [ ] Comment notifications (batched per event)
+- [ ] Saved-search match alerts
+
+## EPIC 9 — Onboarding  🟢
+- [ ] Sign-in → create owner profile → add pet(s) flow
+- [ ] Location permission ask with value framing
+- [ ] Optional: create a saved search from breed + area at the end
+
+## EPIC 10 — Profiles & Badges  🟢
+- [ ] Pet profile screen (photo, breed, size, temperament tags)
+- [ ] Achievement badges: First Meetup, Host, 5 Events, Breed Ambassador
+- [ ] Tap attendee badge → mini profile
+
+## EPIC 11 — Trust, Safety & Moderation  🟢 (launch-critical for a UGC app)
+- [ ] Report event / user / comment  🚫 (UGC apps need report or Apple rejects)
+- [ ] Block user (mutual hide of events, RSVPs, comments)  🚫
+- [ ] Simple admin moderation-queue web view + a process/owner for reviewing reports
+- [ ] Age gate (17+) + community guidelines text on events  🚫
+
+## EPIC 12 — Design System & Accessibility  🟢
+- [ ] Respect Reduce Transparency (glass → solid) & Reduce Motion
+- [ ] Dynamic Type audit; 44pt touch targets
+- [ ] Accessible labels on avatar badges ("Sam and Biscuit, going")
+
+## EPIC 13 — Infra / DevOps  🟢
+- [ ] EAS Build (cloud) — dev client + TestFlight from Windows or Mac
+- [ ] EAS Submit — automated App Store submission
+- [ ] EAS Update — OTA update + rollback strategy
+- [ ] Custom dev client (needed once past Expo Go SDK limits)
+- [ ] .gitattributes (LF), .nvmrc / volta pin, cross-platform npm scripts
+- [ ] CI: typecheck + lint + expo export on PRs
+
+## EPIC 14 — Tech Debt / Quality  🟢
+- [ ] Add a test suite (currently none — verification is typecheck + export + device)
+- [ ] Fix lint findings now that ESLint is wired up
+- [ ] Web-preview parity pass (map.web stub, etc.)
+
+## EPIC 15 — Release & Launch  🔴 (this is "ship & operate it", not "build it")
+
+### 15a — App Store submission
+- [ ] Apple Developer Program membership ($99/yr) + App Store Connect app record + bundle ID
+- [ ] App icon, launch screen, screenshots for all device sizes, optional preview video
+- [ ] Store metadata: description, keywords, category, support URL  🚫 (support URL required)
+- [ ] Age-rating questionnaire + export-compliance (encryption) declaration
+- [ ] App Privacy "nutrition labels" — declare data collected (location, photos, contacts)  🚫
+- [ ] TestFlight beta round before public submission
+
+### 15b — Legal / compliance
+- [ ] Privacy Policy hosted at a public URL + linked in-app and in App Store  🚫
+- [ ] Terms of Service / EULA + community guidelines
+- [ ] GDPR/CCPA data export + deletion (pairs with in-app account deletion in Epic 1)
+
+### 15c — Production ops & security
+- [ ] Separate prod environment + secrets management
+- [ ] Row-level security policies (Supabase RLS) — critical with location + UGC
+- [ ] DB backups + migration strategy
+- [ ] API-layer rate limiting / abuse protection
+- [ ] Security review pass (UGC + location data)
+
+### 15d — Observability
+- [ ] Crash + error reporting (Sentry)
+- [ ] Product analytics + KPIs
+- [ ] Uptime / error alerting + logging
+
+### 15e — Launch readiness (non-code)
+- [ ] Cold-start content plan: seed launch events or pick a beachhead city
+      (an empty events map/list is a dead app)
+- [ ] Support channel (support email — also required by App Store)
+- [ ] Versioning + release + rollback process
+
+---
+
+## Sequencing notes
+- **Epic 1 (Backend)** is the keystone — Epic 8 (Push) and the "persist" tasks
+  in Epics 2/3/4 depend on it. Everything tagged 🟢 can be built today against
+  the mock store and re-pointed at the real backend later.
+- Momentum picks that need no backend: **Epic 3** (extend reviews),
+  **Epic 4** (map⇄list + saved searches), **Epic 13** (EAS → TestFlight build).
+- **Epic 15 is the go-live track** — building the 14 feature epics is "build it";
+  Epic 15 is "ship & operate it." Don't schedule submission until every 🚫 item
+  is done, since Apple rejects on any one of them.
