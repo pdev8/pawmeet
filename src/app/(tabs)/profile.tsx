@@ -3,12 +3,15 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
+  LayoutAnimation,
   Modal,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
   Text,
   TextInput,
+  UIManager,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -37,6 +40,44 @@ interface PetForm {
   size: PetSize;
 }
 
+// LayoutAnimation needs a one-time opt-in on Android; a no-op on iOS.
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+
+/** A profile section whose body collapses/expands when the header is tapped. */
+function Section({
+  title,
+  collapsed,
+  onToggle,
+  right,
+  children,
+}: {
+  title: string;
+  collapsed: boolean;
+  onToggle: () => void;
+  right?: React.ReactNode;
+  children: React.ReactNode;
+}) {
+  const p = usePalette();
+  return (
+    <View style={styles.section}>
+      <Pressable onPress={onToggle} style={styles.sectionHeader} accessibilityRole="button">
+        <View style={styles.sectionHeaderLeft}>
+          <Icon
+            sf={collapsed ? 'chevron.right' : 'chevron.down'}
+            size={11}
+            color={p.textSecondary}
+          />
+          <Text style={[styles.sectionLabel, { color: p.textSecondary }]}>{title}</Text>
+        </View>
+        {right}
+      </Pressable>
+      {collapsed ? null : children}
+    </View>
+  );
+}
+
 export default function ProfileScreen() {
   const p = usePalette();
   const router = useRouter();
@@ -51,6 +92,11 @@ export default function ProfileScreen() {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [petForm, setPetForm] = useState<PetForm | null>(null);
+  const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
+  const toggleSection = (key: string) => {
+    LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+    setCollapsed((c) => ({ ...c, [key]: !c[key] }));
+  };
 
   if (!me) return null;
 
@@ -134,15 +180,17 @@ export default function ProfileScreen() {
           ))}
         </View>
 
-        <View style={styles.section}>
-          <View style={styles.sectionHeader}>
-            <Text style={[styles.sectionLabel, { color: p.textSecondary }]}>MY PETS</Text>
+        <Section
+          title="MY PETS"
+          collapsed={!!collapsed.pets}
+          onToggle={() => toggleSection('pets')}
+          right={
             <Chip
               small
               label="Add pet"
               onPress={() => setPetForm({ name: '', breed: BREEDS[0], size: 'M' })}
             />
-          </View>
+          }>
           {pets.map((pet: Pet) => (
             <Pressable
               key={pet.id}
@@ -160,38 +208,46 @@ export default function ProfileScreen() {
               <Icon sf="pencil" size={14} color={p.textSecondary} />
             </Pressable>
           ))}
-        </View>
+        </Section>
 
         {upcoming.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: p.textSecondary }]}>UPCOMING</Text>
+          <Section
+            title="UPCOMING"
+            collapsed={!!collapsed.upcoming}
+            onToggle={() => toggleSection('upcoming')}>
             {upcoming.map(({ event, rsvp }) => (
               <EventRow key={event.id} event={event} rsvpStatus={rsvp.status} />
             ))}
-          </View>
+          </Section>
         ) : null}
 
         {hostedActive.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: p.textSecondary }]}>HOSTING</Text>
+          <Section
+            title="HOSTING"
+            collapsed={!!collapsed.hosting}
+            onToggle={() => toggleSection('hosting')}>
             {hostedActive.map((event) => (
               <EventRow key={event.id} event={event} />
             ))}
-          </View>
+          </Section>
         ) : null}
 
         {saved.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: p.textSecondary }]}>SAVED</Text>
+          <Section
+            title="SAVED"
+            collapsed={!!collapsed.saved}
+            onToggle={() => toggleSection('saved')}>
             {saved.map((event) => (
               <EventRow key={event.id} event={event} rsvpStatus={myRsvp(store, event.id)?.status} />
             ))}
-          </View>
+          </Section>
         ) : null}
 
         {past.length > 0 ? (
-          <View style={styles.section}>
-            <Text style={[styles.sectionLabel, { color: p.textSecondary }]}>PAST</Text>
+          <Section
+            title="PAST"
+            collapsed={!!collapsed.past}
+            onToggle={() => toggleSection('past')}>
             {past.map((event) => (
               <EventRow
                 key={event.id}
@@ -221,7 +277,7 @@ export default function ProfileScreen() {
                 }
               />
             ))}
-          </View>
+          </Section>
         ) : null}
 
         <Pressable
@@ -350,7 +406,9 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
+    paddingVertical: 2,
   },
+  sectionHeaderLeft: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   sectionLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
   petRow: {
     flexDirection: 'row',
