@@ -3,8 +3,11 @@ import { useRouter } from 'expo-router';
 import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Keyboard,
+  KeyboardAvoidingView,
   Linking,
+  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -30,19 +33,23 @@ import {
   placeRating,
   type DogPlace,
   type PlaceCategory,
+  type PlaceReview,
 } from '@/lib/places';
 import { useStore } from '@/lib/store';
 
-const GREEN = {
-  dog_park: { fill: 'rgba(22,163,74,0.20)', stroke: '#15803D', hatch: 'rgba(21,128,61,0.65)' },
-  park: { fill: 'rgba(34,160,91,0.12)', stroke: '#22A05B', hatch: 'rgba(34,160,91,0.45)' },
+// One distinct hue per category so a filter chip visually matches the areas it
+// toggles: green dog parks, teal parks, olive nature reserves, blue beaches,
+// orange trails. fill/stroke/hatch are all derived from the same base color.
+const CATEGORY_COLORS = {
+  dog_park: { fill: 'rgba(22,163,74,0.22)', stroke: '#16A34A', hatch: 'rgba(22,163,74,0.60)' },
+  park: { fill: 'rgba(13,148,136,0.18)', stroke: '#0D9488', hatch: 'rgba(13,148,136,0.55)' },
   nature_reserve: {
-    fill: 'rgba(52,145,80,0.12)',
-    stroke: '#349150',
-    hatch: 'rgba(52,145,80,0.45)',
+    fill: 'rgba(77,124,15,0.18)',
+    stroke: '#4D7C0F',
+    hatch: 'rgba(77,124,15,0.55)',
   },
-  beach: { fill: 'rgba(16,150,110,0.12)', stroke: '#10966E', hatch: 'rgba(16,150,110,0.45)' },
-  trail: { fill: '', stroke: '#16A34A', hatch: '' },
+  beach: { fill: 'rgba(37,99,235,0.16)', stroke: '#2563EB', hatch: 'rgba(37,99,235,0.55)' },
+  trail: { fill: '', stroke: '#C2410C', hatch: '' },
 } as const;
 
 const ALL_CATEGORIES = Object.keys(CATEGORY_LABELS) as PlaceCategory[];
@@ -71,6 +78,9 @@ export default function MapScreen() {
   const [error, setError] = useState<string | null>(null);
   const [enabled, setEnabled] = useState<Set<PlaceCategory>>(new Set(ALL_CATEGORIES));
   const [selected, setSelected] = useState<DogPlace | null>(null);
+  const [myRating, setMyRating] = useState(0);
+  const [myText, setMyText] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   const initialRegion: Region = {
     latitude: store.center.lat,
@@ -96,6 +106,13 @@ export default function MapScreen() {
     load(store.center.lat, store.center.lng);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Reset the review composer whenever the selected place changes or closes.
+  useEffect(() => {
+    setMyRating(0);
+    setMyText('');
+    setEditingId(null);
+  }, [selected?.id]);
 
   const onSearch = async () => {
     const q = query.trim();
@@ -164,8 +181,75 @@ export default function MapScreen() {
       return next;
     });
 
-  const reviews = selected ? demoReviews(selected, reviewers) : [];
-  const rating = selected ? placeRating(selected) : 0;
+  // My own reviews (persisted) show first, then the demo community reviews.
+  // The headline rating blends both so a place reacts to what I leave.
+  // My reviews (newest first) show at the top, then the demo community reviews.
+  // Each carries its stored id + `mine` so its row can offer edit / delete.
+  const myReviews = selected ? store.placeReviews[selected.id] ?? [] : [];
+  const demoList = selected ? demoReviews(selected, reviewers) : [];
+  const reviews: (PlaceReview & { reviewId?: string; mine?: boolean })[] = [
+    ...[...myReviews].reverse().map((r) => ({
+      reviewId: r.id,
+      mine: true,
+      author: store.users[r.authorId]?.displayName ?? 'You',
+      avatarUrl: store.users[r.authorId]?.avatarUrl ?? '',
+      rating: r.rating,
+      text: r.text,
+      when: 'Just now',
+    })),
+    ...demoList,
+  ];
+  const rating =
+    selected && demoList.length + myReviews.length > 0
+      ? (placeRating(selected) * demoList.length +
+          myReviews.reduce((sum, r) => sum + r.rating, 0)) /
+        (demoList.length + myReviews.length)
+      : selected
+        ? placeRating(selected)
+        : 0;
+
+  const canReview = myRating >= 1 && myText.trim().length > 0;
+
+  const resetComposer = () => {
+    setMyRating(0);
+    setMyText('');
+    setEditingId(null);
+  };
+
+  const submitReview = () => {
+    if (!selected || !canReview) return;
+    if (editingId) {
+      store.updatePlaceReview(selected.id, editingId, myRating, myText);
+    } else {
+      store.addPlaceReview(selected.id, myRating, myText);
+    }
+    resetComposer();
+    Keyboard.dismiss();
+  };
+
+  const editReview = (reviewId: string) => {
+    const r = myReviews.find((x) => x.id === reviewId);
+    if (!r) return;
+    setEditingId(reviewId);
+    setMyRating(r.rating);
+    setMyText(r.text);
+  };
+
+  const deleteReview = (reviewId: string) => {
+    if (!selected) return;
+    const { id: placeId } = selected;
+    Alert.alert('Delete your review?', 'This removes your review for this place.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          store.deletePlaceReview(placeId, reviewId);
+          if (editingId === reviewId) resetComposer();
+        },
+      },
+    ]);
+  };
 
   return (
     <View style={styles.screen}>
@@ -177,7 +261,7 @@ export default function MapScreen() {
         onPress={() => setSelected(null)}
         onRegionChangeComplete={(r) => (regionRef.current = r)}>
         {visible.map((pl) => {
-          const colors = GREEN[pl.category];
+          const colors = CATEGORY_COLORS[pl.category];
           if (pl.line) {
             return (
               <Polyline
@@ -227,7 +311,7 @@ export default function MapScreen() {
               <View
                 style={[
                   styles.logoPin,
-                  { backgroundColor: p.card, borderColor: GREEN[pl.category].stroke },
+                  { backgroundColor: p.card, borderColor: CATEGORY_COLORS[pl.category].stroke },
                 ]}>
                 <PawkLogo size={22} animated={false} />
               </View>
@@ -254,20 +338,42 @@ export default function MapScreen() {
           </Pressable>
         </Glass>
 
-        <View style={styles.chipsRow}>
-          {ALL_CATEGORIES.map((c) => (
-            <Chip
-              key={c}
-              small
-              label={CATEGORY_LABELS[c]}
-              selected={enabled.has(c)}
-              onPress={() => toggle(c)}
-            />
-          ))}
-        </View>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          keyboardShouldPersistTaps="handled"
+          contentContainerStyle={styles.chipsRow}>
+          {ALL_CATEGORIES.map((c) => {
+            const active = enabled.has(c);
+            const color = CATEGORY_COLORS[c].stroke;
+            return (
+              <Pressable
+                key={c}
+                onPress={() => toggle(c)}
+                accessibilityRole="button"
+                accessibilityState={{ selected: active }}
+                style={({ pressed }) => [
+                  styles.filterChip,
+                  {
+                    backgroundColor: active ? color : p.card,
+                    borderColor: color,
+                    opacity: pressed ? 0.85 : 1,
+                  },
+                ]}>
+                <Text
+                  style={[styles.filterLabel, { color: active ? '#fff' : p.text }]}>
+                  {CATEGORY_LABELS[c]}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </ScrollView>
       </View>
 
-      <View style={[styles.bottomBar, { bottom: Math.max(insets.bottom, 12) }]}>
+      <KeyboardAvoidingView
+        style={[styles.bottomBar, { bottom: Math.max(insets.bottom, 12) }]}
+        behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+        pointerEvents="box-none">
         {selected ? (
           <Glass style={styles.sheet}>
             <View style={styles.sheetHeader}>
@@ -297,10 +403,10 @@ export default function MapScreen() {
 
             <ScrollView style={styles.reviewScroll}>
               <Text style={[styles.reviewLabel, { color: p.textSecondary }]}>
-                COMMUNITY REVIEWS · DEMO
+                COMMUNITY REVIEWS
               </Text>
               {reviews.map((r, i) => (
-                <View key={i} style={styles.reviewRow}>
+                <View key={r.reviewId ?? `demo-${i}`} style={styles.reviewRow}>
                   <Image source={{ uri: r.avatarUrl }} style={styles.reviewAvatar} />
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.reviewAuthor, { color: p.text }]}>
@@ -314,9 +420,91 @@ export default function MapScreen() {
                     </Text>
                     <Text style={[styles.reviewText, { color: p.text }]}>{r.text}</Text>
                   </View>
+                  {r.mine && r.reviewId ? (
+                    <View style={styles.reviewRowActions}>
+                      <Pressable
+                        onPress={() => editReview(r.reviewId!)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel="Edit your review">
+                        <Icon sf="pencil" size={16} color={p.textSecondary} />
+                      </Pressable>
+                      <Pressable
+                        onPress={() => deleteReview(r.reviewId!)}
+                        hitSlop={8}
+                        accessibilityRole="button"
+                        accessibilityLabel="Delete your review">
+                        <Icon sf="trash" size={16} color={p.danger} />
+                      </Pressable>
+                    </View>
+                  ) : null}
                 </View>
               ))}
             </ScrollView>
+
+            <View style={styles.composer}>
+              <View style={styles.composerHead}>
+                <Text style={[styles.reviewLabel, { color: p.textSecondary }]}>
+                  {editingId ? 'EDITING YOUR REVIEW' : 'LEAVE A REVIEW'}
+                </Text>
+                {editingId ? (
+                  <Pressable
+                    onPress={resetComposer}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityLabel="Cancel editing">
+                    <Text style={[styles.deleteLink, { color: p.textSecondary }]}>Cancel</Text>
+                  </Pressable>
+                ) : null}
+              </View>
+              <View style={styles.starPicker}>
+                {[1, 2, 3, 4, 5].map((n) => (
+                  <Pressable
+                    key={n}
+                    onPress={() => setMyRating(n)}
+                    hitSlop={6}
+                    accessibilityRole="button"
+                    accessibilityLabel={`Rate ${n} star${n === 1 ? '' : 's'}`}>
+                    <Icon
+                      sf={n <= myRating ? 'star.fill' : 'star'}
+                      size={22}
+                      color={n <= myRating ? p.accent : p.textSecondary}
+                    />
+                  </Pressable>
+                ))}
+                <Text style={[styles.composerHint, { color: p.textSecondary }]}>
+                  {myRating ? `${myRating}/5` : 'Tap to rate'}
+                </Text>
+              </View>
+              <View style={styles.composerInputRow}>
+                <TextInput
+                  value={myText}
+                  onChangeText={setMyText}
+                  placeholder="Share a tip for other dog owners…"
+                  placeholderTextColor={p.textSecondary}
+                  multiline
+                  style={[
+                    styles.composerInput,
+                    { color: p.text, borderColor: p.separator, backgroundColor: p.card },
+                  ]}
+                />
+                <Pressable
+                  onPress={submitReview}
+                  disabled={!canReview}
+                  accessibilityRole="button"
+                  accessibilityLabel={editingId ? 'Save review' : 'Post review'}
+                  style={[
+                    styles.sendBtn,
+                    { backgroundColor: canReview ? p.accent : p.chipBg },
+                  ]}>
+                  <Icon
+                    sf={editingId ? 'checkmark' : 'paperplane.fill'}
+                    size={16}
+                    color={canReview ? '#fff' : p.textSecondary}
+                  />
+                </Pressable>
+              </View>
+            </View>
 
             <View style={styles.sheetActions}>
               <Chip
@@ -371,7 +559,7 @@ export default function MapScreen() {
         <Text style={[styles.attribution, { color: p.textSecondary }]}>
           Map data © OpenStreetMap contributors
         </Text>
-      </View>
+      </KeyboardAvoidingView>
     </View>
   );
 }
@@ -393,7 +581,21 @@ const styles = StyleSheet.create({
     borderRadius: Radii.lg,
   },
   input: { flex: 1, fontSize: 15, fontWeight: '600', paddingVertical: 2 },
-  chipsRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  chipsRow: { flexDirection: 'row', gap: 6, paddingRight: Spacing.three },
+  filterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: Radii.lg,
+    borderWidth: 1.5,
+    shadowColor: '#000',
+    shadowOpacity: 0.18,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  filterLabel: { fontSize: 12, fontWeight: '700', fontFamily: Fonts?.rounded },
   logoPin: {
     borderRadius: 18,
     borderWidth: 2,
@@ -443,8 +645,33 @@ const styles = StyleSheet.create({
   reviewScroll: { maxHeight: 190 },
   reviewLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginBottom: 6 },
   reviewRow: { flexDirection: 'row', gap: Spacing.two, marginBottom: Spacing.two },
+  reviewRowActions: { flexDirection: 'row', gap: Spacing.two, alignItems: 'flex-start', paddingTop: 1 },
   reviewAvatar: { width: 30, height: 30, borderRadius: 15 },
   reviewAuthor: { fontSize: 13, fontWeight: '700' },
   reviewText: { fontSize: 13, lineHeight: 18, marginTop: 1 },
-  sheetActions: { flexDirection: 'row', gap: Spacing.two },
+  sheetActions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
+  composer: { gap: Spacing.two, marginTop: Spacing.half },
+  composerHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  deleteLink: { fontSize: 12, fontWeight: '700' },
+  starPicker: { flexDirection: 'row', alignItems: 'center', gap: 6 },
+  composerHint: { fontSize: 12, fontWeight: '600', marginLeft: Spacing.one },
+  composerInputRow: { flexDirection: 'row', alignItems: 'flex-end', gap: Spacing.two },
+  composerInput: {
+    flex: 1,
+    minHeight: 40,
+    maxHeight: 96,
+    borderWidth: 1,
+    borderRadius: Radii.md,
+    paddingHorizontal: Spacing.two,
+    paddingVertical: 9,
+    fontSize: 14,
+    textAlignVertical: 'top',
+  },
+  sendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
 });

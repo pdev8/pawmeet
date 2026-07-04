@@ -13,8 +13,8 @@ interface XY {
  */
 export function crosshatch(
   ring: MapPoint[],
-  spacingM = 35,
-  maxLinesPerDirection = 12,
+  spacingM = 17.5,
+  maxLinesPerDirection = 24,
 ): MapPoint[][] {
   if (ring.length < 3) return [];
   const lat0 = ring[0].latitude;

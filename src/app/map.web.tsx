@@ -25,9 +25,9 @@ export default function MapScreenWeb() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.lg, gap: Spacing.md },
+  container: { flex: 1, alignItems: 'center', justifyContent: 'center', padding: Spacing.four, gap: Spacing.three },
   title: { fontFamily: Fonts.rounded, fontSize: 24, fontWeight: '800' },
   body: { fontSize: 15, textAlign: 'center', maxWidth: 340, lineHeight: 21 },
-  btn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 999, marginTop: Spacing.sm },
+  btn: { paddingHorizontal: 20, paddingVertical: 12, borderRadius: 999, marginTop: Spacing.two },
   btnText: { color: '#fff', fontWeight: '700', fontSize: 15 },
 });

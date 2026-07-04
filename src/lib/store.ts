@@ -13,6 +13,7 @@ import type {
   PetEvent,
   PetSize,
   Rsvp,
+  StoredPlaceReview,
   User,
   VenueType,
 } from './types';
@@ -44,6 +45,7 @@ interface AppState {
   rsvps: Rsvp[];
   comments: EventComment[];
   notifications: AppNotification[];
+  placeReviews: Record<string, StoredPlaceReview[]>;
   draft: Partial<EventDraft> | null;
 
   setHasHydrated: (v: boolean) => void;
@@ -64,6 +66,10 @@ interface AppState {
   createEvent: (input: Omit<EventDraft, 'useMyLocation'> & { lat: number; lng: number }) => string;
   cancelEvent: (eventId: string) => void;
   setDraft: (draft: Partial<EventDraft> | null) => void;
+
+  addPlaceReview: (placeId: string, rating: number, text: string) => void;
+  updatePlaceReview: (placeId: string, reviewId: string, rating: number, text: string) => void;
+  deletePlaceReview: (placeId: string, reviewId: string) => void;
 
   updateProfile: (displayName: string) => void;
   addPet: (name: string, breed: string, size: PetSize) => void;
@@ -106,6 +112,7 @@ export const useStore = create<AppState>()(
       rsvps: [],
       comments: [],
       notifications: [],
+      placeReviews: {},
       draft: null,
 
       setHasHydrated: (v) => set({ hasHydrated: v }),
@@ -410,6 +417,57 @@ export const useStore = create<AppState>()(
 
       setDraft: (draft) => set({ draft }),
 
+      addPlaceReview: (placeId, rating, text) => {
+        const body = text.trim();
+        if (!placeId || rating < 1 || !body) return;
+        const s = get();
+        const existing = s.placeReviews[placeId] ?? [];
+        const review: StoredPlaceReview = {
+          id: newId('pr'),
+          placeId,
+          authorId: s.currentUserId,
+          rating,
+          text: body,
+          createdAt: new Date().toISOString(),
+        };
+        set({
+          placeReviews: { ...s.placeReviews, [placeId]: [...existing, review] },
+        });
+      },
+
+      updatePlaceReview: (placeId, reviewId, rating, text) => {
+        const body = text.trim();
+        if (rating < 1 || !body) return;
+        const s = get();
+        const list = s.placeReviews[placeId];
+        if (!list) return;
+        set({
+          placeReviews: {
+            ...s.placeReviews,
+            [placeId]: list.map((r) =>
+              r.id === reviewId && r.authorId === s.currentUserId
+                ? { ...r, rating, text: body, createdAt: new Date().toISOString() }
+                : r,
+            ),
+          },
+        });
+      },
+
+      deletePlaceReview: (placeId, reviewId) => {
+        const s = get();
+        const list = s.placeReviews[placeId];
+        if (!list) return;
+        // Only the author can delete, and reviews here are always the user's own.
+        const next = list.filter(
+          (r) => !(r.id === reviewId && r.authorId === s.currentUserId),
+        );
+        if (next.length === list.length) return;
+        const placeReviews = { ...s.placeReviews };
+        if (next.length) placeReviews[placeId] = next;
+        else delete placeReviews[placeId];
+        set({ placeReviews });
+      },
+
       updateProfile: (displayName) => {
         const s = get();
         const me = s.users[s.currentUserId];
@@ -463,6 +521,7 @@ export const useStore = create<AppState>()(
         rsvps: s.rsvps,
         comments: s.comments,
         notifications: s.notifications,
+        placeReviews: s.placeReviews,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

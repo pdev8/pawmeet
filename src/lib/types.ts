@@ -15,6 +15,16 @@ export interface LatLng {
   lng: number;
 }
 
+/** A review the current user wrote for a map place, keyed by DogPlace id. */
+export interface StoredPlaceReview {
+  id: string;
+  placeId: string;
+  authorId: string;
+  rating: number;
+  text: string;
+  createdAt: string;
+}
+
 export interface User {
   id: string;
   displayName: string;
