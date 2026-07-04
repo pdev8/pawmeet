@@ -1,0 +1,607 @@
+<title>Pawk Backlog</title>
+<style>
+  :root {
+    --bg: #FAF8F5;
+    --surface: #FFFFFF;
+    --surface-2: #F3EFE9;
+    --border: rgba(28,25,23,0.10);
+    --border-strong: rgba(28,25,23,0.24);
+    --text: #1C1917;
+    --text-dim: #6B6560;
+    --accent: #D97706;
+    --accent-soft: rgba(217,119,6,0.12);
+    --on-accent: #FFFFFF;
+    --danger: #B91C1C;
+    --danger-soft: rgba(220,38,38,0.10);
+    --good: #15803D;
+    --good-soft: rgba(22,163,74,0.13);
+    --info: #0D9488;
+    --info-soft: rgba(13,148,136,0.13);
+    --shadow: 0 1px 2px rgba(28,25,23,0.05), 0 6px 20px rgba(28,25,23,0.05);
+    --toolbar-bg: rgba(250,248,245,0.82);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #100F0D;
+      --surface: #1C1A17;
+      --surface-2: #26231F;
+      --border: rgba(245,242,238,0.11);
+      --border-strong: rgba(245,242,238,0.28);
+      --text: #F5F2EE;
+      --text-dim: #A8A29E;
+      --accent: #F59E0B;
+      --accent-soft: rgba(245,158,11,0.16);
+      --on-accent: #231A05;
+      --danger: #F87171;
+      --danger-soft: rgba(248,113,113,0.15);
+      --good: #4ADE80;
+      --good-soft: rgba(74,222,128,0.15);
+      --info: #2DD4BF;
+      --info-soft: rgba(45,212,191,0.15);
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+      --toolbar-bg: rgba(16,15,13,0.82);
+    }
+  }
+  :root[data-theme="light"] {
+    --bg: #FAF8F5; --surface: #FFFFFF; --surface-2: #F3EFE9;
+    --border: rgba(28,25,23,0.10); --border-strong: rgba(28,25,23,0.24);
+    --text: #1C1917; --text-dim: #6B6560; --accent: #D97706;
+    --accent-soft: rgba(217,119,6,0.12); --on-accent: #FFFFFF;
+    --danger: #B91C1C; --danger-soft: rgba(220,38,38,0.10);
+    --good: #15803D; --good-soft: rgba(22,163,74,0.13);
+    --info: #0D9488; --info-soft: rgba(13,148,136,0.13);
+    --shadow: 0 1px 2px rgba(28,25,23,0.05), 0 6px 20px rgba(28,25,23,0.05);
+    --toolbar-bg: rgba(250,248,245,0.82);
+  }
+  :root[data-theme="dark"] {
+    --bg: #100F0D; --surface: #1C1A17; --surface-2: #26231F;
+    --border: rgba(245,242,238,0.11); --border-strong: rgba(245,242,238,0.28);
+    --text: #F5F2EE; --text-dim: #A8A29E; --accent: #F59E0B;
+    --accent-soft: rgba(245,158,11,0.16); --on-accent: #231A05;
+    --danger: #F87171; --danger-soft: rgba(248,113,113,0.15);
+    --good: #4ADE80; --good-soft: rgba(74,222,128,0.15);
+    --info: #2DD4BF; --info-soft: rgba(45,212,191,0.15);
+    --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    --toolbar-bg: rgba(16,15,13,0.82);
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: -apple-system, system-ui, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+  }
+  .rounded {
+    font-family: "SF Pro Rounded", ui-rounded, -apple-system, system-ui, "Segoe UI", Roboto, sans-serif;
+  }
+  .wrap { max-width: 880px; margin: 0 auto; padding: 0 20px 96px; }
+
+  /* ---- Header ---- */
+  header { padding: 40px 0 8px; }
+  .brand { display: flex; align-items: center; gap: 12px; }
+  .paw { color: var(--accent); flex: none; }
+  .brand h1 {
+    margin: 0; font-size: clamp(26px, 5vw, 34px); font-weight: 800;
+    letter-spacing: -0.02em; text-wrap: balance;
+  }
+  .brand .sub { font-size: 13px; color: var(--text-dim); font-weight: 600; margin-top: 2px; }
+  .savenote { font-size: 12px; color: var(--text-dim); margin: 14px 0 22px; display: flex; align-items: center; gap: 6px; }
+  .savenote .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--good); flex: none; }
+
+  /* ---- Overall progress + stats ---- */
+  .overview {
+    background: var(--surface); border: 1px solid var(--border); border-radius: 18px;
+    padding: 20px; box-shadow: var(--shadow); margin-bottom: 8px;
+  }
+  .ov-top { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+  .ov-pct { font-size: 34px; font-weight: 800; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+  .ov-count { font-size: 14px; color: var(--text-dim); font-weight: 600; font-variant-numeric: tabular-nums; }
+  .bar { height: 10px; border-radius: 999px; background: var(--surface-2); overflow: hidden; margin: 14px 0 18px; }
+  .bar > i { display: block; height: 100%; width: 0; border-radius: 999px; background: linear-gradient(90deg, var(--accent), color-mix(in srgb, var(--accent) 70%, var(--good))); transition: width .45s cubic-bezier(.2,.7,.2,1); }
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; }
+  .stat { background: var(--surface-2); border-radius: 12px; padding: 12px 14px; }
+  .stat .n { font-size: 24px; font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+  .stat .l { font-size: 11px; text-transform: uppercase; letter-spacing: 0.07em; color: var(--text-dim); font-weight: 700; margin-top: 2px; }
+  .stat.blockers .n { color: var(--danger); }
+  .stat.blockers.clear .n { color: var(--good); }
+
+  /* ---- Sticky toolbar ---- */
+  .toolbar {
+    position: sticky; top: 0; z-index: 20;
+    background: var(--toolbar-bg); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+    padding: 12px 0; margin: 14px 0 6px;
+  }
+  .filters { display: flex; gap: 6px; flex-wrap: wrap; }
+  .pill {
+    font: inherit; font-size: 13px; font-weight: 700; cursor: pointer;
+    border: 1px solid var(--border-strong); background: var(--surface); color: var(--text);
+    padding: 6px 12px; border-radius: 999px; display: inline-flex; align-items: center; gap: 6px;
+    transition: background .15s, border-color .15s, color .15s;
+  }
+  .pill:hover { background: var(--surface-2); }
+  .pill[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+  .pill.danger[aria-pressed="true"] { background: var(--danger); border-color: var(--danger); color: #fff; }
+  .tb-spacer { flex: 1 1 auto; }
+  .tb-readout { font-size: 12px; color: var(--text-dim); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+  /* ---- Epics ---- */
+  .epic { background: var(--surface); border: 1px solid var(--border); border-radius: 16px; box-shadow: var(--shadow); margin-top: 14px; overflow: hidden; }
+  .epic.hidden, .task.hidden, .subhead.hidden { display: none; }
+  .epic-head { display: flex; align-items: center; gap: 12px; padding: 16px 18px; cursor: pointer; user-select: none; }
+  .epic-head:hover { background: var(--surface-2); }
+  .chev { flex: none; color: var(--text-dim); transition: transform .2s; }
+  .epic.collapsed .chev { transform: rotate(-90deg); }
+  .epic-num { flex: none; font-size: 12px; font-weight: 800; color: var(--accent); background: var(--accent-soft); border-radius: 8px; padding: 3px 8px; font-variant-numeric: tabular-nums; }
+  .epic-title { flex: 1 1 auto; min-width: 0; font-size: 16.5px; font-weight: 750; letter-spacing: -0.01em; }
+  .epic-title { font-weight: 700; }
+  .epic-meta { display: flex; align-items: center; gap: 10px; flex: none; }
+  .mini { font-size: 12px; color: var(--text-dim); font-weight: 700; font-variant-numeric: tabular-nums; white-space: nowrap; }
+  .ring { --p: 0; width: 30px; height: 30px; flex: none; border-radius: 50%;
+    background: conic-gradient(var(--accent) calc(var(--p) * 1%), var(--surface-2) 0); }
+  .ring.done { background: conic-gradient(var(--good) 100%, var(--good) 0); }
+  .ring > span { display: block; width: 100%; height: 100%; }
+
+  .epic-body { padding: 4px 12px 12px; }
+  .epic.collapsed .epic-body { display: none; }
+  .tag-row { display: flex; gap: 6px; flex-wrap: wrap; padding: 0 6px 8px; }
+
+  .tag { font-size: 11px; font-weight: 700; letter-spacing: 0.02em; padding: 3px 9px; border-radius: 999px; display: inline-flex; align-items: center; gap: 5px; }
+  .tag.indep { color: var(--good); background: var(--good-soft); }
+  .tag.blocks { color: var(--accent); background: var(--accent-soft); }
+  .tag.next { color: var(--accent); background: var(--accent-soft); }
+  .tag.blocker { color: var(--danger); background: var(--danger-soft); }
+
+  .subhead { font-size: 11px; text-transform: uppercase; letter-spacing: 0.08em; font-weight: 800; color: var(--text-dim); padding: 14px 12px 4px; }
+
+  .task { display: flex; gap: 12px; align-items: flex-start; padding: 9px 10px; border-radius: 11px; transition: background .12s; }
+  .task:hover { background: var(--surface-2); }
+  .task label { display: flex; gap: 12px; align-items: flex-start; cursor: pointer; flex: 1 1 auto; min-width: 0; }
+  input.cb { appearance: none; -webkit-appearance: none; margin: 1px 0 0; flex: none;
+    width: 21px; height: 21px; border: 2px solid var(--border-strong); border-radius: 7px;
+    background: var(--surface); cursor: pointer; display: grid; place-content: center; transition: background .15s, border-color .15s; }
+  input.cb:checked { background: var(--accent); border-color: var(--accent); }
+  input.cb:checked::after { content: ""; width: 6px; height: 11px; border: solid var(--on-accent); border-width: 0 2.5px 2.5px 0; transform: rotate(42deg) translateY(-1px); }
+  input.cb:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+  .task-text { font-size: 15px; }
+  .task .blocker-flag { font-size: 11px; font-weight: 800; color: var(--danger); background: var(--danger-soft); border-radius: 6px; padding: 1px 6px; margin-left: 8px; white-space: nowrap; letter-spacing: 0.02em; vertical-align: 1px; }
+  .task.done .task-text { color: var(--text-dim); text-decoration: line-through; text-decoration-color: var(--border-strong); }
+  .task.done .blocker-flag { opacity: .5; }
+
+  footer { margin-top: 32px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 12.5px; color: var(--text-dim); }
+  footer a { color: var(--accent); }
+  .reset { font: inherit; font-size: 12.5px; font-weight: 700; color: var(--danger); background: none; border: 1px solid var(--border-strong); border-radius: 999px; padding: 6px 13px; cursor: pointer; }
+  .reset:hover { background: var(--danger-soft); border-color: var(--danger); }
+
+  @media (max-width: 560px) {
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .epic-title { font-size: 15px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    * { transition: none !important; }
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <div class="brand">
+      <svg class="paw" width="34" height="34" viewBox="0 0 48 48" aria-hidden="true" fill="currentColor">
+        <ellipse cx="24" cy="32" rx="11.5" ry="9"/>
+        <circle cx="11" cy="20" r="4.6"/>
+        <circle cx="20" cy="13.5" r="4.9"/>
+        <circle cx="30.5" cy="14.5" r="4.9"/>
+        <circle cx="38.5" cy="21.5" r="4.4"/>
+      </svg>
+      <div>
+        <h1 class="rounded">Pawk Backlog</h1>
+        <div class="sub">Path from v1 demo → live on the App Store</div>
+      </div>
+    </div>
+    <div class="savenote"><span class="dot"></span> Progress saves automatically in this browser.</div>
+
+    <div class="overview">
+      <div class="ov-top">
+        <div class="ov-pct rounded"><span id="pct">0</span>%</div>
+        <div class="ov-count"><span id="doneN">0</span> of <span id="totalN">0</span> tasks complete</div>
+      </div>
+      <div class="bar"><i id="ovbar"></i></div>
+      <div class="stats">
+        <div class="stat"><div class="n" id="s-total">0</div><div class="l">Tasks</div></div>
+        <div class="stat"><div class="n" id="s-done" style="color:var(--good)">0</div><div class="l">Done</div></div>
+        <div class="stat"><div class="n" id="s-left">0</div><div class="l">Remaining</div></div>
+        <div class="stat blockers" id="s-block-wrap"><div class="n" id="s-block">0</div><div class="l">Blockers left</div></div>
+      </div>
+    </div>
+  </header>
+
+  <div class="toolbar">
+    <div class="filters" role="group" aria-label="Filter tasks">
+      <button class="pill" data-filter="all" aria-pressed="true">All</button>
+      <button class="pill danger" data-filter="blocker" aria-pressed="false">🚫 Blockers</button>
+      <button class="pill" data-filter="next" aria-pressed="false">⭐ Suggested next</button>
+      <button class="pill" id="hideDone" aria-pressed="false">Hide done</button>
+    </div>
+    <div class="tb-spacer"></div>
+    <div class="tb-readout"><span id="tb-left">0</span> left</div>
+  </div>
+
+  <main id="list"></main>
+
+  <footer>
+    <div>Built from <strong>BACKLOG.md</strong> · 🟢 independent · 🔴 unblocks others · ⭐ next up · 🚫 App Store blocker</div>
+    <button class="reset" id="reset">Reset progress</button>
+  </footer>
+</div>
+
+<script>
+"use strict";
+
+// flags: 'indep' 🟢 | 'blocks' 🔴 | 'next' ⭐  (epic-level)   'blocker' 🚫 (task-level)
+const DATA = [
+  { n: 1, title: "Backend & Auth", flags: ["blocks"], tasks: [
+    { t: "Decide backend: Supabase (Postgres + PostGIS) vs Firebase" },
+    { t: "Stand up schema: users, pets, events, rsvps, comments, place_reviews, reports" },
+    { t: "Sign in with Apple + email auth", b: true },
+    { t: "In-app account deletion flow", b: true },
+    { t: "Swap zustand mock store → real data layer (TanStack Query)" },
+    { t: "Replace mock timers (host approval, canned replies) with real writes" },
+    { t: "PostGIS radius search (ST_DWithin) to replace client-side haversine" },
+    { t: "Scheduled archival job (pg_cron hourly, events >24h past end)" },
+  ]},
+  { n: 2, title: "Map & Places", flags: ["indep"], tasks: [
+    { t: "Persist filter selections across sessions" },
+    { t: "Cluster pins when zoomed out" },
+    { t: "Cache Overpass results so re-opening isn't a cold fetch" },
+    { t: "Loading / empty / error states polish for “search this area”" },
+    { t: "Show event pins on the map, not just POIs" },
+    { t: "Legend / key for the category colors" },
+  ]},
+  { n: 3, title: "Place Reviews (extend)", flags: ["indep", "next"], tasks: [
+    { t: "Persist reviews to backend (currently on-device only)" },
+    { t: "Real relative timestamps instead of “Just now”" },
+    { t: "Show review count next to the star rating" },
+    { t: "Attach a photo to a review" },
+    { t: "Report / flag a review" },
+  ]},
+  { n: 4, title: "Discovery / Search", flags: ["indep", "next"], tasks: [
+    { t: "“Has spots left” toggle", done: true },
+    { t: "Empty-state CTA: host the first event in this area", done: true },
+    { t: "Real place geocoding — inline area search + loading UX + seed variety", done: true },
+    { t: "Saved searches (“goldens within 25 mi”) — save + apply · PR open" },
+    { t: "Favorite / bookmark events → a Saved list · PR open" },
+    { t: "Map ⇄ list toggle on the Discover screen — deferred (device-in-loop)" },
+  ]},
+  { n: 5, title: "Post / Host an Event", flags: ["indep"], tasks: [
+    { t: "Address autocomplete (MapKit search) in the Where step" },
+    { t: "Real cover-photo upload (currently placedog.net)" },
+    { t: "Edit event (notify attendees of time/place changes)" },
+    { t: "Host dashboard: attendee + pet list, headcount incl. dogs" },
+    { t: "Recurring events (weekly / biweekly / monthly) · PR open" },
+  ]},
+  { n: 6, title: "RSVP & Attendance", flags: ["indep"], tasks: [
+    { t: "Choose which pet(s) you're bringing on RSVP" },
+    { t: "Add-to-calendar from event detail" },
+    { t: "New-account friction for hosting backyard events" },
+  ]},
+  { n: 7, title: "Comments", flags: ["indep"], tasks: [
+    { t: "Realtime new comments while the event screen is open" },
+    { t: "“Host” / “Going” author context chips" },
+    { t: "Rate limit + 1000-char cap enforcement" },
+    { t: "Report a comment" },
+  ]},
+  { n: 8, title: "Notifications & Push", flags: ["blocks"], tasks: [
+    { t: "Expo Notifications + APNs setup" },
+    { t: "Event reminders (24h + 2h before)" },
+    { t: "Push: RSVP approved, waitlist promoted, event changed / cancelled" },
+    { t: "Comment notifications (batched per event)" },
+    { t: "Saved-search match alerts" },
+  ]},
+  { n: 9, title: "Onboarding", flags: ["indep"], tasks: [
+    { t: "Sign-in → create owner profile → add pet(s) flow" },
+    { t: "Location permission ask with value framing" },
+    { t: "Optional: create a saved search from breed + area" },
+  ]},
+  { n: 10, title: "Profiles & Badges", flags: ["indep"], tasks: [
+    { t: "Pet profile screen (photo, breed, size, temperament tags)" },
+    { t: "Achievement badges: First Meetup, Host, 5 Events, Breed Ambassador" },
+    { t: "Tap attendee badge → mini profile" },
+  ]},
+  { n: 11, title: "Trust, Safety & Moderation", flags: ["indep"], note: "launch-critical for a UGC app", tasks: [
+    { t: "Report event / user / comment", b: true },
+    { t: "Block user (mutual hide of events, RSVPs, comments)", b: true },
+    { t: "Admin moderation-queue web view + a review process/owner" },
+    { t: "Age gate (17+) + community guidelines text on events", b: true },
+  ]},
+  { n: 12, title: "Design System & Accessibility", flags: ["indep"], tasks: [
+    { t: "Respect Reduce Transparency (glass → solid) & Reduce Motion" },
+    { t: "Dynamic Type audit; 44pt touch targets" },
+    { t: "Accessible labels on avatar badges (“Sam and Biscuit, going”)" },
+  ]},
+  { n: 13, title: "Infra / DevOps", flags: ["indep"], tasks: [
+    { t: "EAS Build (cloud) — dev client + TestFlight from Windows or Mac" },
+    { t: "EAS Submit — automated App Store submission" },
+    { t: "EAS Update — OTA update + rollback strategy" },
+    { t: "Custom dev client (once past Expo Go SDK limits)" },
+    { t: ".gitattributes (LF), .nvmrc / volta pin, cross-platform npm scripts" },
+    { t: "CI: typecheck + lint + expo export on PRs" },
+  ]},
+  { n: 14, title: "Tech Debt / Quality", flags: ["indep"], tasks: [
+    { t: "Add a test suite — Vitest unit tests for pure src/lib logic", done: true },
+    { t: "Extend test coverage: filters/discovery, selectors, dates, seed" },
+    { t: "Fix lint findings now that ESLint is wired up" },
+    { t: "Web-preview parity pass (map.web stub, etc.)" },
+  ]},
+  { n: 15, title: "Release & Launch", flags: ["blocks"], note: "ship & operate it, not build it", groups: [
+    { label: "15a · App Store submission", tasks: [
+      { t: "Apple Developer Program ($99/yr) + App Store Connect record + bundle ID" },
+      { t: "App icon, launch screen, screenshots for all sizes, optional preview video" },
+      { t: "Store metadata: description, keywords, category, support URL", b: true },
+      { t: "Age-rating questionnaire + export-compliance (encryption) declaration" },
+      { t: "App Privacy “nutrition labels” — declare data collected", b: true },
+      { t: "TestFlight beta round before public submission" },
+    ]},
+    { label: "15b · Legal / compliance", tasks: [
+      { t: "Privacy Policy hosted at a public URL + linked in-app and store", b: true },
+      { t: "Terms of Service / EULA + community guidelines" },
+      { t: "GDPR/CCPA data export + deletion" },
+    ]},
+    { label: "15c · Production ops & security", tasks: [
+      { t: "Separate prod environment + secrets management" },
+      { t: "Row-level security policies (Supabase RLS)" },
+      { t: "DB backups + migration strategy" },
+      { t: "API-layer rate limiting / abuse protection" },
+      { t: "Security review pass (UGC + location data)" },
+    ]},
+    { label: "15d · Observability", tasks: [
+      { t: "Crash + error reporting (Sentry)" },
+      { t: "Product analytics + KPIs" },
+      { t: "Uptime / error alerting + logging" },
+    ]},
+    { label: "15e · Launch readiness (non-code)", tasks: [
+      { t: "Cold-start content plan: seed launch events or pick a beachhead city" },
+      { t: "Support channel (support email — also required by App Store)" },
+      { t: "Versioning + release + rollback process" },
+    ]},
+  ]},
+];
+
+const TAG_META = {
+  indep:  { cls: "indep",  label: "🟢 independent" },
+  blocks: { cls: "blocks", label: "🔴 unblocks others" },
+  next:   { cls: "next",   label: "⭐ suggested next" },
+};
+
+const CHECK_KEY = "pawk-backlog-checks-v2";
+const UI_KEY = "pawk-backlog-ui-v2";
+
+const load = (k, d) => { try { return Object.assign(d, JSON.parse(localStorage.getItem(k)) || {}); } catch { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+
+let checks = load(CHECK_KEY, {});
+let ui = load(UI_KEY, { filter: "all", hideDone: false, collapsed: {} });
+
+// Build task registry with stable ids + metadata.
+const TASKS = []; // {id, epicN, text, blocker, isNext}
+DATA.forEach(ep => {
+  const isNext = (ep.flags || []).includes("next");
+  let idx = 0;
+  const addTask = (t) => {
+    const id = "e" + ep.n + "-" + (idx++);
+    TASKS.push({ id, epicN: ep.n, text: t.t, blocker: !!t.b, isNext, done: !!t.done });
+    // Seed completed items so the tracker opens reflecting real progress; a
+    // user toggle (stored under id) always wins over this default.
+    if (t.done && !(id in checks)) checks[id] = true;
+    t.__id = id;
+  };
+  if (ep.groups) ep.groups.forEach(g => g.tasks.forEach(addTask));
+  else ep.tasks.forEach(addTask);
+});
+
+const list = document.getElementById("list");
+
+function taskEl(t) {
+  const wrap = document.createElement("div");
+  wrap.className = "task";
+  wrap.dataset.id = t.id;
+  wrap.dataset.blocker = t.blocker ? "1" : "0";
+  wrap.dataset.next = t.isNext ? "1" : "0";
+
+  const label = document.createElement("label");
+  const cb = document.createElement("input");
+  cb.type = "checkbox";
+  cb.className = "cb";
+  cb.checked = !!checks[t.id];
+  cb.addEventListener("change", () => toggle(t.id, cb.checked, wrap));
+
+  const span = document.createElement("span");
+  span.className = "task-text";
+  span.textContent = t.text;
+  if (t.blocker) {
+    const f = document.createElement("span");
+    f.className = "blocker-flag";
+    f.textContent = "🚫 blocker";
+    span.appendChild(f);
+  }
+  label.appendChild(cb);
+  label.appendChild(span);
+  wrap.appendChild(label);
+  if (cb.checked) wrap.classList.add("done");
+  return wrap;
+}
+
+function render() {
+  const frag = document.createDocumentFragment();
+  DATA.forEach(ep => {
+    const epic = document.createElement("section");
+    epic.className = "epic";
+    epic.dataset.n = ep.n;
+    if (ui.collapsed[ep.n]) epic.classList.add("collapsed");
+
+    // head
+    const head = document.createElement("div");
+    head.className = "epic-head";
+    head.setAttribute("role", "button");
+    head.setAttribute("tabindex", "0");
+    head.innerHTML =
+      '<svg class="chev" width="14" height="14" viewBox="0 0 16 16" aria-hidden="true"><path d="M4 6l4 4 4-4" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>' +
+      '<span class="epic-num">' + (ep.n < 10 ? "0" + ep.n : ep.n) + '</span>' +
+      '<span class="epic-title rounded"></span>' +
+      '<span class="epic-meta"><span class="mini"></span><span class="ring"><span></span></span></span>';
+    head.querySelector(".epic-title").textContent = ep.title;
+    const toggleCollapse = () => {
+      epic.classList.toggle("collapsed");
+      ui.collapsed[ep.n] = epic.classList.contains("collapsed");
+      save(UI_KEY, ui);
+    };
+    head.addEventListener("click", toggleCollapse);
+    head.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); toggleCollapse(); } });
+    epic.appendChild(head);
+
+    // body
+    const body = document.createElement("div");
+    body.className = "epic-body";
+
+    const tags = (ep.flags || []).map(f => TAG_META[f]).filter(Boolean);
+    if (tags.length || ep.note) {
+      const tr = document.createElement("div");
+      tr.className = "tag-row";
+      tags.forEach(m => {
+        const s = document.createElement("span");
+        s.className = "tag " + m.cls;
+        s.textContent = m.label;
+        tr.appendChild(s);
+      });
+      if (ep.note) {
+        const s = document.createElement("span");
+        s.className = "tag blocker";
+        s.textContent = ep.note;
+        tr.appendChild(s);
+      }
+      body.appendChild(tr);
+    }
+
+    if (ep.groups) {
+      ep.groups.forEach(g => {
+        const sh = document.createElement("div");
+        sh.className = "subhead";
+        sh.textContent = g.label;
+        body.appendChild(sh);
+        g.tasks.forEach(t => body.appendChild(taskEl(TASKS.find(x => x.id === t.__id))));
+      });
+    } else {
+      ep.tasks.forEach(t => body.appendChild(taskEl(TASKS.find(x => x.id === t.__id))));
+    }
+
+    epic.appendChild(body);
+    frag.appendChild(epic);
+  });
+  list.innerHTML = "";
+  list.appendChild(frag);
+  updateAll();
+  applyVisibility();
+}
+
+function toggle(id, val, rowEl) {
+  if (val) checks[id] = true; else delete checks[id];
+  save(CHECK_KEY, checks);
+  rowEl.classList.toggle("done", val);
+  updateAll();
+  if (ui.hideDone) applyVisibility();
+}
+
+function updateAll() {
+  const total = TASKS.length;
+  const done = TASKS.filter(t => checks[t.id]).length;
+  const blockers = TASKS.filter(t => t.blocker);
+  const blockLeft = blockers.filter(t => !checks[t.id]).length;
+  const pct = total ? Math.round((done / total) * 100) : 0;
+
+  document.getElementById("pct").textContent = pct;
+  document.getElementById("ovbar").style.width = pct + "%";
+  document.getElementById("doneN").textContent = done;
+  document.getElementById("totalN").textContent = total;
+  document.getElementById("s-total").textContent = total;
+  document.getElementById("s-done").textContent = done;
+  document.getElementById("s-left").textContent = total - done;
+  document.getElementById("s-block").textContent = blockLeft;
+  document.getElementById("tb-left").textContent = (total - done);
+  const bw = document.getElementById("s-block-wrap");
+  bw.classList.toggle("clear", blockLeft === 0);
+
+  // per-epic rings
+  document.querySelectorAll(".epic").forEach(epic => {
+    const n = +epic.dataset.n;
+    const et = TASKS.filter(t => t.epicN === n);
+    const ed = et.filter(t => checks[t.id]).length;
+    const ep = et.length ? Math.round((ed / et.length) * 100) : 0;
+    epic.querySelector(".mini").textContent = ed + "/" + et.length;
+    const ring = epic.querySelector(".ring");
+    ring.style.setProperty("--p", ep);
+    ring.classList.toggle("done", ep === 100);
+  });
+}
+
+function applyVisibility() {
+  const f = ui.filter;
+  document.querySelectorAll(".epic").forEach(epic => {
+    let visibleInEpic = 0;
+    epic.querySelectorAll(".task").forEach(row => {
+      const isDone = row.classList.contains("done");
+      const isBlocker = row.dataset.blocker === "1";
+      const isNext = row.dataset.next === "1";
+      let show = true;
+      if (f === "blocker" && !isBlocker) show = false;
+      if (f === "next" && !isNext) show = false;
+      if (ui.hideDone && isDone) show = false;
+      row.classList.toggle("hidden", !show);
+      if (show) visibleInEpic++;
+    });
+    // subheads: hide if all following tasks in that group are hidden
+    epic.querySelectorAll(".subhead").forEach(sh => {
+      let anyVisible = false;
+      let el = sh.nextElementSibling;
+      while (el && el.classList.contains("task")) {
+        if (!el.classList.contains("hidden")) anyVisible = true;
+        el = el.nextElementSibling;
+      }
+      sh.classList.toggle("hidden", !anyVisible);
+    });
+    epic.classList.toggle("hidden", visibleInEpic === 0);
+  });
+}
+
+// ---- Toolbar wiring ----
+document.querySelectorAll(".pill[data-filter]").forEach(btn => {
+  btn.addEventListener("click", () => {
+    ui.filter = btn.dataset.filter;
+    document.querySelectorAll(".pill[data-filter]").forEach(b =>
+      b.setAttribute("aria-pressed", b === btn ? "true" : "false"));
+    save(UI_KEY, ui);
+    applyVisibility();
+  });
+});
+const hideDoneBtn = document.getElementById("hideDone");
+hideDoneBtn.addEventListener("click", () => {
+  ui.hideDone = !ui.hideDone;
+  hideDoneBtn.setAttribute("aria-pressed", ui.hideDone ? "true" : "false");
+  save(UI_KEY, ui);
+  applyVisibility();
+});
+document.getElementById("reset").addEventListener("click", () => {
+  if (!confirm("Clear all checkmarks? This can't be undone.")) return;
+  checks = {};
+  save(CHECK_KEY, checks);
+  render();
+});
+
+// restore toolbar state on load
+document.querySelectorAll(".pill[data-filter]").forEach(b =>
+  b.setAttribute("aria-pressed", b.dataset.filter === ui.filter ? "true" : "false"));
+hideDoneBtn.setAttribute("aria-pressed", ui.hideDone ? "true" : "false");
+
+render();
+</script>
