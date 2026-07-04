@@ -21,6 +21,7 @@ import { usePalette } from '@/hooks/use-palette';
 import { BREEDS } from '@/lib/breeds';
 import {
   hostedEvents,
+  myFavoriteEvents,
   myPastEvents,
   myPets,
   myRsvp,
@@ -44,6 +45,7 @@ export default function ProfileScreen() {
   const pets = myPets(store);
   const upcoming = myUpcomingEvents(store);
   const hostedActive = hostedEvents(store, 'active');
+  const saved = myFavoriteEvents(store);
   const past = myPastEvents(store);
 
   const [editingName, setEditingName] = useState(false);
@@ -174,6 +176,15 @@ export default function ProfileScreen() {
             <Text style={[styles.sectionLabel, { color: p.textSecondary }]}>HOSTING</Text>
             {hostedActive.map((event) => (
               <EventRow key={event.id} event={event} />
+            ))}
+          </View>
+        ) : null}
+
+        {saved.length > 0 ? (
+          <View style={styles.section}>
+            <Text style={[styles.sectionLabel, { color: p.textSecondary }]}>SAVED</Text>
+            {saved.map((event) => (
+              <EventRow key={event.id} event={event} rsvpStatus={myRsvp(store, event.id)?.status} />
             ))}
           </View>
         ) : null}

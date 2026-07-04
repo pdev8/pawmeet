@@ -8,6 +8,7 @@ interface DataSlice {
   rsvps: Rsvp[];
   comments: { eventId: string; deletedBy?: 'author' | 'host' }[];
   currentUserId: string;
+  favorites?: string[];
 }
 
 export function eventRsvps(s: DataSlice, eventId: string): Rsvp[] {
@@ -110,6 +111,17 @@ export function myUpcomingEvents(s: DataSlice): { event: PetEvent; rsvp: Rsvp }[
       return event && event.status === 'active' ? [{ event, rsvp: r }] : [];
     })
     .sort((a, b) => a.event.startsAt.localeCompare(b.event.startsAt));
+}
+
+export function isFavorite(s: DataSlice, eventId: string): boolean {
+  return (s.favorites ?? []).includes(eventId);
+}
+
+/** Favorited events that are still active, in most-recently-saved order. */
+export function myFavoriteEvents(s: DataSlice): PetEvent[] {
+  return (s.favorites ?? [])
+    .map((id) => s.events[id])
+    .filter((e): e is PetEvent => !!e && e.status === 'active');
 }
 
 export function myPastEvents(s: DataSlice): PetEvent[] {

@@ -5,7 +5,7 @@ import { ME_ID, useStore } from './store';
 const state = () => useStore.getState();
 
 beforeEach(() => {
-  useStore.setState({ placeReviews: {}, currentUserId: ME_ID });
+  useStore.setState({ placeReviews: {}, favorites: [], currentUserId: ME_ID });
 });
 
 describe('addPlaceReview', () => {
@@ -78,5 +78,19 @@ describe('deletePlaceReview', () => {
     useStore.setState({ currentUserId: 'someone-else' });
     state().deletePlaceReview('p1', id);
     expect(state().placeReviews.p1).toHaveLength(1);
+  });
+});
+
+describe('toggleFavorite', () => {
+  it('adds an event to favorites (most recent first)', () => {
+    state().toggleFavorite('e1');
+    state().toggleFavorite('e2');
+    expect(state().favorites).toEqual(['e2', 'e1']);
+  });
+
+  it('removes an event when toggled again', () => {
+    state().toggleFavorite('e1');
+    state().toggleFavorite('e1');
+    expect(state().favorites).toEqual([]);
   });
 });

@@ -46,6 +46,7 @@ interface AppState {
   comments: EventComment[];
   notifications: AppNotification[];
   placeReviews: Record<string, StoredPlaceReview[]>;
+  favorites: string[];
   draft: Partial<EventDraft> | null;
 
   setHasHydrated: (v: boolean) => void;
@@ -70,6 +71,8 @@ interface AppState {
   addPlaceReview: (placeId: string, rating: number, text: string) => void;
   updatePlaceReview: (placeId: string, reviewId: string, rating: number, text: string) => void;
   deletePlaceReview: (placeId: string, reviewId: string) => void;
+
+  toggleFavorite: (eventId: string) => void;
 
   updateProfile: (displayName: string) => void;
   addPet: (name: string, breed: string, size: PetSize) => void;
@@ -113,6 +116,7 @@ export const useStore = create<AppState>()(
       comments: [],
       notifications: [],
       placeReviews: {},
+      favorites: [],
       draft: null,
 
       setHasHydrated: (v) => set({ hasHydrated: v }),
@@ -468,6 +472,16 @@ export const useStore = create<AppState>()(
         set({ placeReviews });
       },
 
+      toggleFavorite: (eventId) => {
+        const s = get();
+        const has = s.favorites.includes(eventId);
+        set({
+          favorites: has
+            ? s.favorites.filter((id) => id !== eventId)
+            : [eventId, ...s.favorites],
+        });
+      },
+
       updateProfile: (displayName) => {
         const s = get();
         const me = s.users[s.currentUserId];
@@ -522,6 +536,7 @@ export const useStore = create<AppState>()(
         comments: s.comments,
         notifications: s.notifications,
         placeReviews: s.placeReviews,
+        favorites: s.favorites,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
