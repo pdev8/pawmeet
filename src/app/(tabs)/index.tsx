@@ -155,6 +155,13 @@ export default function DiscoverScreen() {
         <View style={styles.brandRow}>
           <PawkLogo size={38} />
           <Text style={[styles.title, { color: p.text }]}>Pawk</Text>
+          <View style={{ flex: 1 }} />
+          <Chip
+            label="Map"
+            sf="map.fill"
+            selected
+            onPress={() => router.push('/map')}
+          />
         </View>
         <Pressable onPress={onChangeArea} style={styles.areaRow} accessibilityRole="button">
           <Icon sf="mappin.and.ellipse" size={14} color={p.accent} />

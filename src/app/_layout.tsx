@@ -37,6 +37,10 @@ export default function RootLayout() {
       <Stack>
         <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
         <Stack.Screen name="event/[id]" options={{ headerShown: false }} />
+        <Stack.Screen
+          name="map"
+          options={{ headerShown: false, presentation: 'fullScreenModal' }}
+        />
       </Stack>
     </ThemeProvider>
   );
