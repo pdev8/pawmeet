@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "pawmeet",
+    "name": "Pawk",
     "slug": "pawmeet",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -8,7 +8,10 @@
     "scheme": "pawmeet",
     "userInterfaceStyle": "automatic",
     "ios": {
-      "icon": "./assets/expo.icon"
+      "icon": "./assets/expo.icon",
+      "infoPlist": {
+        "NSLocationWhenInUseUsageDescription": "Pawk uses your location to find pet events near you and show how far away they are."
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -32,7 +35,8 @@
           "image": "./assets/images/splash-icon.png",
           "imageWidth": 76
         }
-      ]
+      ],
+      "@react-native-community/datetimepicker"
     ],
     "experiments": {
       "typedRoutes": true,

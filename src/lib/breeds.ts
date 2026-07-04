@@ -1,0 +1,15 @@
+export const BREEDS = [
+  'Golden Retriever',
+  'Labrador Retriever',
+  'German Shepherd',
+  'French Bulldog',
+  'Poodle',
+  'Corgi',
+  'Dachshund',
+  'Beagle',
+  'Australian Shepherd',
+  'Border Collie',
+  'Siberian Husky',
+  'Shiba Inu',
+  'Mixed / Other',
+] as const;
