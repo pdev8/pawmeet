@@ -30,6 +30,7 @@ import {
   type SortMode,
 } from '@/lib/filters';
 import { DEFAULT_CENTER, DEFAULT_CENTER_LABEL } from '@/lib/geo';
+import { geocodeLocation } from '@/lib/places';
 import { useStore } from '@/lib/store';
 
 const SORTS: { value: SortMode; label: string }[] = [
@@ -121,8 +122,33 @@ export default function DiscoverScreen() {
   );
   const nFilters = activeFilterCount(filters);
 
+  // Geocode a free-text place (Nominatim, via places.ts) and re-center the demo
+  // events on it. A real backend would just re-query events near the hit.
+  const searchArea = (query: string) => {
+    const q = query.trim();
+    if (!q) return;
+    (async () => {
+      const hit = await geocodeLocation(q).catch(() => null);
+      if (!hit) {
+        Alert.alert('Place not found', `Couldn't find "${q}". Try a city, neighborhood, or ZIP.`);
+        return;
+      }
+      useStore.getState().reseed({ lat: hit.lat, lng: hit.lng }, hit.label);
+    })();
+  };
+
   const onChangeArea = () => {
     Alert.alert('Event area', 'Where should we look for events?', [
+      {
+        text: 'Search a place…',
+        onPress: () =>
+          Alert.prompt(
+            'Search a place',
+            'City, neighborhood, or ZIP',
+            searchArea,
+            'plain-text',
+          ),
+      },
       {
         text: 'Use my location',
         onPress: async () => {
