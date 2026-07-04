@@ -60,7 +60,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [x] "Has spots left" toggle — already in the filter sheet
 - [x] Empty-state CTA: "host the first event in this area" — already wired
 - [x] Real place geocoding for the area picker (Nominatim) — shipped: inline collapsible search + loading UX + location-varied demo events
-- [ ] Saved searches ("goldens within 25 mi") — save + apply 🔬 in review: `epic4/saved-searches`; alerts need Epic 8
+- [ ] Saved searches ("goldens within 25 mi") — deferred to a future enhancement (built + tested on branch `epic4/saved-searches`, PR #3 closed); alerts need Epic 8
 - [x] Favorite / bookmark events → a Saved list (heart on cards + event detail; collapsible Saved section on Profile)
 - [ ] Map ⇄ list toggle on the Discover screen — deferred: needs device-in-loop (touches the pull-to-refresh animation)
 
