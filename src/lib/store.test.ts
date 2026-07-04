@@ -1,11 +1,31 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
 import { ME_ID, useStore } from './store';
+import type { PetEvent } from './types';
 
 const state = () => useStore.getState();
 
 beforeEach(() => {
-  useStore.setState({ placeReviews: {}, favorites: [], currentUserId: ME_ID });
+  useStore.setState({ placeReviews: {}, favorites: [], events: {}, currentUserId: ME_ID });
+});
+
+const daysFromNow = (n: number) => new Date(Date.now() + n * 86400000).toISOString();
+const mkEvent = (over: Partial<PetEvent>): PetEvent => ({
+  id: 'e1',
+  hostId: 'u1',
+  title: 'Test event',
+  description: '',
+  coverPhotoUrl: '',
+  startsAt: daysFromNow(-8),
+  endsAt: daysFromNow(-8),
+  venueType: 'public_park',
+  lat: 30,
+  lng: -97,
+  address: '',
+  areaLabel: '',
+  rsvpMode: 'open',
+  status: 'active',
+  ...over,
 });
 
 describe('addPlaceReview', () => {
@@ -92,5 +112,36 @@ describe('toggleFavorite', () => {
     state().toggleFavorite('e1');
     state().toggleFavorite('e1');
     expect(state().favorites).toEqual([]);
+  });
+});
+
+describe('archiveSweep with recurring events', () => {
+  it('rolls an over recurring event forward and keeps it active', () => {
+    useStore.setState({ events: { e1: mkEvent({ recurrence: 'weekly' }) } });
+    state().archiveSweep();
+    const ev = state().events.e1;
+    expect(ev.status).toBe('active');
+    expect(new Date(ev.startsAt).getTime()).toBeGreaterThan(Date.now());
+  });
+
+  it('archives an over non-recurring event as before', () => {
+    useStore.setState({ events: { e1: mkEvent({}) } });
+    state().archiveSweep();
+    expect(state().events.e1.status).toBe('archived');
+  });
+
+  it('archives (does not resurrect) a cancelled recurring series', () => {
+    useStore.setState({ events: { e1: mkEvent({ recurrence: 'weekly', status: 'cancelled' }) } });
+    state().archiveSweep();
+    expect(state().events.e1.status).toBe('archived');
+  });
+
+  it('leaves a future recurring event untouched', () => {
+    const future = daysFromNow(3);
+    useStore.setState({
+      events: { e1: mkEvent({ recurrence: 'weekly', startsAt: future, endsAt: future }) },
+    });
+    state().archiveSweep();
+    expect(state().events.e1.startsAt).toBe(future);
   });
 });

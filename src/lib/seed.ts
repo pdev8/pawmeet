@@ -119,13 +119,14 @@ export function buildSeed(
     breedFocus?: string;
     capacity?: number;
     approves?: boolean;
+    recurrence?: PetEvent['recurrence'];
   }
 
   const specs: EvSpec[] = [
     {
       id: 'e1', title: 'Morning Pack Walk', hostId: 'u9', day: 1, hour: 8, durH: 1.5,
       venue: 'public_park', east: 1.2, north: 0.4, cover: 40, area: 'Riverside Trail',
-      address: 'Riverside Trailhead, Lot B',
+      address: 'Riverside Trailhead, Lot B', recurrence: 'weekly',
       desc: 'Easy 2-mile loop along the river. All friendly, leashed dogs welcome. We grab coffee at the kiosk after — dogs get pup cups. 🐾',
     },
     {
@@ -138,7 +139,7 @@ export function buildSeed(
       id: 'e3', title: 'Golden Retriever Meetup at the Park', hostId: 'u1', day: 3, hour: 10, durH: 2,
       venue: 'public_park', east: 3.1, north: 2.0, cover: 42, area: 'Great Lawn',
       address: 'Great Lawn, north entrance by the fountain',
-      breedFocus: 'Golden Retriever',
+      breedFocus: 'Golden Retriever', recurrence: 'monthly',
       desc: 'Monthly golden gathering! All friendly dogs welcome — goldens just set the dress code. Bring water; we bring the tennis balls. Group photo at 11.',
     },
     {
@@ -325,6 +326,7 @@ export function buildSeed(
       breedFocus: s.breedFocus,
       capacity: s.capacity,
       rsvpMode: s.approves ? 'host_approves' : 'open',
+      recurrence: s.recurrence,
       status: 'active',
     };
   }

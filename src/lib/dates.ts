@@ -1,6 +1,17 @@
+import type { EventRecurrence } from './types';
+
 export function addDays(base: Date, days: number): Date {
   const d = new Date(base);
   d.setDate(d.getDate() + days);
+  return d;
+}
+
+/** Advance a date by one recurrence interval (UTC-based, so it's stable
+ *  across DST boundaries and independent of the machine timezone). */
+export function advanceByRecurrence(base: Date, r: EventRecurrence): Date {
+  const d = new Date(base);
+  if (r === 'monthly') d.setUTCMonth(d.getUTCMonth() + 1);
+  else d.setUTCDate(d.getUTCDate() + (r === 'biweekly' ? 14 : 7));
   return d;
 }
 

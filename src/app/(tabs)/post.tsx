@@ -24,13 +24,20 @@ import { BREEDS } from '@/lib/breeds';
 import { at } from '@/lib/dates';
 import { offsetMi } from '@/lib/geo';
 import { useStore } from '@/lib/store';
-import { VENUE_ICONS, VENUE_LABELS, type VenueType } from '@/lib/types';
+import {
+  RECURRENCE_LABELS,
+  VENUE_ICONS,
+  VENUE_LABELS,
+  type EventRecurrence,
+  type VenueType,
+} from '@/lib/types';
 
 const COVER_OPTIONS = [60, 61, 62, 63, 64, 65].map(
   (id) => `https://placedog.net/800/500?id=${id}`,
 );
 const DURATIONS = [1, 1.5, 2, 3, 4];
 const VENUES = Object.keys(VENUE_LABELS) as VenueType[];
+const RECURRENCES = Object.keys(RECURRENCE_LABELS) as EventRecurrence[];
 const STEPS = ['Basics', 'When', 'Where', 'Who', 'Review'] as const;
 
 interface FormState {
@@ -45,6 +52,7 @@ interface FormState {
   breedFocus: string | null;
   capacity: string;
   rsvpMode: 'open' | 'host_approves';
+  recurrence: EventRecurrence | null;
 }
 
 function freshForm(): FormState {
@@ -60,6 +68,7 @@ function freshForm(): FormState {
     breedFocus: null,
     capacity: '',
     rsvpMode: 'open',
+    recurrence: null,
   };
 }
 
@@ -85,6 +94,7 @@ export default function PostScreen() {
           breedFocus: draft.breedFocus ?? null,
           capacity: draft.capacity != null ? String(draft.capacity) : '',
           rsvpMode: draft.rsvpMode ?? 'open',
+          recurrence: draft.recurrence ?? null,
         }));
         setStep(0);
         useStore.getState().setDraft(null);
@@ -147,6 +157,7 @@ export default function PostScreen() {
       breedFocus: form.breedFocus ?? undefined,
       capacity: Number.isFinite(capacity) && capacity > 0 ? capacity : undefined,
       rsvpMode: form.rsvpMode,
+      recurrence: form.recurrence ?? undefined,
       lat: loc.lat,
       lng: loc.lng,
     });
@@ -248,6 +259,23 @@ export default function PostScreen() {
                     label={d === 1 ? '1 hour' : `${d} hours`}
                     selected={form.durH === d}
                     onPress={() => upd({ durH: d })}
+                  />
+                ))}
+              </View>
+              <Text style={[styles.label, { color: p.textSecondary }]}>REPEATS</Text>
+              <View style={styles.wrapRow}>
+                <Chip
+                  label="One-time"
+                  selected={form.recurrence === null}
+                  onPress={() => upd({ recurrence: null })}
+                />
+                {RECURRENCES.map((r) => (
+                  <Chip
+                    key={r}
+                    sf="repeat"
+                    label={RECURRENCE_LABELS[r]}
+                    selected={form.recurrence === r}
+                    onPress={() => upd({ recurrence: r })}
                   />
                 ))}
               </View>
@@ -353,7 +381,12 @@ export default function PostScreen() {
             <View style={styles.stepWrap}>
               <Image source={{ uri: form.coverPhotoUrl }} style={styles.reviewCover} />
               <Text style={[styles.reviewTitle, { color: p.text }]}>{form.title || 'Untitled'}</Text>
-              <ReviewRow sf="calendar" text={`${form.start.toLocaleString()} · ${form.durH}h`} />
+              <ReviewRow
+                sf="calendar"
+                text={`${form.start.toLocaleString()} · ${form.durH}h${
+                  form.recurrence ? ` · repeats ${RECURRENCE_LABELS[form.recurrence].toLowerCase()}` : ''
+                }`}
+              />
               <ReviewRow
                 sf={VENUE_ICONS[form.venueType]}
                 text={`${VENUE_LABELS[form.venueType]} — ${form.address || 'near your area'}`}
