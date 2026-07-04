@@ -9,7 +9,7 @@ import { Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { fmtTime, relDay } from '@/lib/dates';
 import { fmtDistance } from '@/lib/geo';
-import { attendeeBadges, commentCount, spotsLeft } from '@/lib/selectors';
+import { attendeeBadges, commentCount, isFavorite, spotsLeft } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import { VENUE_ICONS, VENUE_LABELS, type PetEvent } from '@/lib/types';
 
@@ -20,6 +20,7 @@ export function EventCard({ event, distanceMi }: { event: PetEvent; distanceMi: 
   const { badges, goingCount } = attendeeBadges(state, event.id);
   const comments = commentCount(state, event.id);
   const left = spotsLeft(state, event);
+  const favorite = isFavorite(state, event.id);
 
   return (
     <Pressable
@@ -40,6 +41,18 @@ export function EventCard({ event, distanceMi }: { event: PetEvent; distanceMi: 
           <Chip small label={VENUE_LABELS[event.venueType]} sf={VENUE_ICONS[event.venueType]} />
           {event.breedFocus ? <Chip small label={event.breedFocus} sf="pawprint.fill" /> : null}
         </View>
+        <Pressable
+          onPress={() => useStore.getState().toggleFavorite(event.id)}
+          hitSlop={8}
+          accessibilityRole="button"
+          accessibilityLabel={favorite ? 'Remove from saved' : 'Save event'}
+          style={[styles.heart, { backgroundColor: p.overlay }]}>
+          <Icon
+            sf={favorite ? 'heart.fill' : 'heart'}
+            size={18}
+            color={favorite ? p.accent : '#fff'}
+          />
+        </Pressable>
         {left !== null && left <= 0 ? (
           <View style={[styles.fullTag, { backgroundColor: p.overlay }]}>
             <Text style={styles.fullTagText}>Full · waitlist open</Text>
@@ -85,6 +98,16 @@ const styles = StyleSheet.create({
     left: Spacing.three,
     flexDirection: 'row',
     gap: 6,
+  },
+  heart: {
+    position: 'absolute',
+    top: Spacing.three,
+    right: Spacing.three,
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   fullTag: {
     position: 'absolute',
