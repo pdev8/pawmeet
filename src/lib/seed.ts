@@ -204,8 +204,108 @@ export function buildSeed(
     },
   ];
 
+  // A larger pool of "flavor" events. A deterministic subset is chosen per
+  // area (keyed off the center) so different places show a different mix, and
+  // re-picking the same place is stable. The core events above always appear so
+  // the scripted demos (waitlist, my hosted event, inbox) keep working.
+  const extraSpecs: EvSpec[] = [
+    {
+      id: 'x1', title: 'Sunrise Beagle Sniffari', hostId: 'u9', day: 2, hour: 7, durH: 1,
+      venue: 'public_park', east: -2.1, north: 1.3, cover: 54, area: 'Lakeshore Meadows',
+      address: 'Lakeshore Meadows, east gate', breedFocus: 'Beagle',
+      desc: 'Nose-led wander for scent hounds and friends. Slow pace, lots of sniff breaks. Coffee after.',
+    },
+    {
+      id: 'x2', title: 'Doodle Meet & Greet', hostId: 'u3', day: 4, hour: 10, durH: 2,
+      venue: 'dog_park', east: 1.7, north: -2.4, cover: 55, area: 'Barkley Commons',
+      address: 'Barkley Commons dog park', breedFocus: 'Poodle',
+      desc: 'Poodles and doodles of every size. Curly coats encouraged but all welcome.',
+    },
+    {
+      id: 'x3', title: 'Brew & Bark Trivia Night', hostId: 'u6', day: 5, hour: 18, durH: 2,
+      venue: 'business', east: 2.4, north: 0.8, cover: 56, area: 'Tap Row',
+      address: 'Fetch & Firkin, 88 Tap Row', capacity: 30,
+      desc: 'Dog-friendly pub trivia. Teams of 4 (dogs are honorary members). Prizes and pup cups.',
+    },
+    {
+      id: 'x4', title: 'Senior Dogs Slow Stroll', hostId: 'u13', day: 6, hour: 9, durH: 1,
+      venue: 'public_park', east: -1.2, north: 2.6, cover: 57, area: 'Willow Bend',
+      address: 'Willow Bend Park, pond loop',
+      desc: 'Gentle short loop for grey muzzles and recovering pups. Benches the whole way.',
+    },
+    {
+      id: 'x5', title: 'Puppy Kindergarten Playdate', hostId: 'u17', day: 8, hour: 16, durH: 1.5,
+      venue: 'business', east: 0.6, north: -1.5, cover: 58, area: 'Downtown',
+      address: 'Wag Academy, 12 Market St', capacity: 10, approves: true,
+      desc: 'Supervised play for pups under 5 months. Vaccination proof required at the door.',
+    },
+    {
+      id: 'x6', title: 'Herding Breeds Field Day', hostId: 'u11', day: 10, hour: 9, durH: 3,
+      venue: 'public_park', east: 5.1, north: 3.3, cover: 59, area: 'Highland Fields',
+      address: 'Highland Fields, west pasture', breedFocus: 'Australian Shepherd', capacity: 20,
+      desc: 'Aussies, collies, heelers — come put that brain to work. Intro herding demos on the hour.',
+    },
+    {
+      id: 'x7', title: 'Lakeside Retriever Swim', hostId: 'u2', day: 11, hour: 8, durH: 2,
+      venue: 'other', east: -3.4, north: -2.2, cover: 60, area: 'Cedar Lake',
+      address: 'Cedar Lake dog beach', breedFocus: 'Labrador Retriever',
+      desc: 'Water dogs, unite. Bring a towel and a floaty toy. Shallow entry, lifeguard-brained humans welcome.',
+    },
+    {
+      id: 'x8', title: 'Adoptable Dogs Mixer', hostId: 'u4', day: 12, hour: 11, durH: 3,
+      venue: 'public_park', east: 2.9, north: 1.1, cover: 61, area: 'Civic Green',
+      address: 'Civic Green, main lawn',
+      desc: 'Local rescues bring adoptable pups to meet the crew. Foster-curious folks especially welcome. 🐾',
+    },
+    {
+      id: 'x9', title: 'Corgi Beach Sprint', hostId: 'u15', day: 15, hour: 10, durH: 2,
+      venue: 'other', east: -4.8, north: 3.9, cover: 62, area: 'Dune Point',
+      address: 'Dune Point off-leash beach', breedFocus: 'Corgi',
+      desc: 'Short legs, big zoomies. Loaf races at noon. Sand will get everywhere and it will be worth it.',
+    },
+    {
+      id: 'x10', title: 'Shiba & Spitz Society', hostId: 'u1', day: 17, hour: 15, durH: 2,
+      venue: 'dog_park', east: 3.6, north: -3.7, cover: 63, area: 'Northside',
+      address: 'Northside Bark Park', breedFocus: 'Shiba Inu',
+      desc: 'Curly tails and side-eye. Shibas, huskies, akitas, and the fluffy-adjacent all welcome.',
+    },
+    {
+      id: 'x11', title: 'Dog-Friendly Farmers Market Walk', hostId: 'u16', day: 19, hour: 9, durH: 2,
+      venue: 'other', east: 1.0, north: 0.5, cover: 64, area: 'Old Town',
+      address: 'Old Town Farmers Market entrance',
+      desc: 'Leashed stroll through the stalls. Several vendors do dog treats. Meet by the flower cart.',
+    },
+    {
+      id: 'x12', title: 'Big Dogs Only Romp', hostId: 'u8', day: 22, hour: 17, durH: 2,
+      venue: 'dog_park', east: 6.8, north: -4.1, cover: 65, area: 'Eastgate',
+      address: 'Eastgate Dog Run, large dog side', capacity: 25,
+      desc: '50 lbs and up. Big zoomies, big water bowls. Gentle giants and bouncy adolescents welcome.',
+    },
+    {
+      id: 'x13', title: 'Rescue Mutts Social', hostId: 'u14', day: 25, hour: 10, durH: 2,
+      venue: 'public_park', east: -2.7, north: -1.8, cover: 66, area: 'Southside Commons',
+      address: 'Southside Commons, shelter pavilion', breedFocus: 'Mixed / Other',
+      desc: 'One-of-a-kind pups and their people. Best-ears contest, entirely unofficial.',
+    },
+    {
+      id: 'x14', title: 'German Shepherd Working Group', hostId: 'u6', day: 27, hour: 8, durH: 2,
+      venue: 'public_park', east: 4.2, north: 2.7, cover: 67, area: 'Ridgeview',
+      address: 'Ridgeview Park, training field', breedFocus: 'German Shepherd', capacity: 15,
+      desc: 'Focus, drive, and good manners. Obedience warmups then off-leash recall practice.',
+    },
+  ];
+
+  // Rotate a window into the pool based on the area center — stable per place,
+  // different across places.
+  const areaSeed = Math.abs(Math.round(center.lat * 1000 + center.lng * 1000));
+  const EXTRA_COUNT = 8;
+  const chosenExtras: EvSpec[] = Array.from(
+    { length: Math.min(EXTRA_COUNT, extraSpecs.length) },
+    (_, i) => extraSpecs[(areaSeed + i) % extraSpecs.length],
+  );
+
   const events: Record<string, PetEvent> = {};
-  for (const s of specs) {
+  for (const s of [...specs, ...chosenExtras]) {
     const start = at(s.day, Math.floor(s.hour), Math.round((s.hour % 1) * 60));
     const end = new Date(start.getTime() + s.durH * 3600 * 1000);
     const loc = offsetMi(center, s.east, s.north);
@@ -309,6 +409,16 @@ export function buildSeed(
   addRsvp('e11', 'u7', 'going', 9400); addRsvp('e11', 'u14', 'going', 8100);
   addRsvp('e12', 'u8', 'going', 9300); addRsvp('e12', 'u6', 'going', 8400);
   addRsvp('e12', 'u11', 'interested', 7200);
+
+  // A few attendees for each location-varied flavor event so their cards
+  // aren't empty. Deterministic per event so re-picking a place is stable.
+  chosenExtras.forEach((s, idx) => {
+    const n = 2 + (idx % 3); // 2–4 attendees
+    for (let k = 0; k < n; k++) {
+      const uid = `u${1 + ((idx * 3 + k) % PEOPLE.length)}`;
+      addRsvp(s.id, uid, k === n - 1 ? 'interested' : 'going', 6000 - idx * 200 - k * 300);
+    }
+  });
 
   // Past events: I attended e13; e14 was mine with a few attendees.
   addRsvp('e13', 'u1', 'going', 20000); addRsvp('e13', ME_ID, 'going', 19000);

@@ -5,9 +5,14 @@ import {
   Alert,
   Animated,
   Easing,
+  Keyboard,
+  LayoutAnimation,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
+  UIManager,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -20,7 +25,7 @@ import { Icon } from '@/components/icon';
 import { Glass } from '@/components/glass';
 import { PawkLogo } from '@/components/logo';
 import { PawkRefreshLogo, type RefreshPhase } from '@/components/refresh-logo';
-import { BottomTabInset, Fonts, Spacing } from '@/constants/theme';
+import { BottomTabInset, Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import {
   activeFilterCount,
@@ -29,7 +34,7 @@ import {
   type Filters,
   type SortMode,
 } from '@/lib/filters';
-import { DEFAULT_CENTER, DEFAULT_CENTER_LABEL } from '@/lib/geo';
+import { geocodeLocation } from '@/lib/places';
 import { useStore } from '@/lib/store';
 
 const SORTS: { value: SortMode; label: string }[] = [
@@ -38,12 +43,21 @@ const SORTS: { value: SortMode; label: string }[] = [
   { value: 'popular', label: 'Popular' },
 ];
 
+// LayoutAnimation needs a one-time opt-in on Android; a no-op on iOS.
+if (Platform.OS === 'android' && UIManager.setLayoutAnimationEnabledExperimental) {
+  UIManager.setLayoutAnimationEnabledExperimental(true);
+}
+const animateArea = () => LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
+
 export default function DiscoverScreen() {
   const p = usePalette();
   const router = useRouter();
   const store = useStore();
   const [filters, setFilters] = useState<Filters>(DEFAULT_FILTERS);
   const [showFilters, setShowFilters] = useState(false);
+  const [searching, setSearching] = useState(false);
+  const [areaQuery, setAreaQuery] = useState('');
+  const [editingArea, setEditingArea] = useState(false);
   const [phase, setPhase] = useState<RefreshPhase>('idle');
   const scrollY = useRef(new Animated.Value(0)).current;
   // Animated spacer at the top of the list: opens while the mascot animates
@@ -121,32 +135,76 @@ export default function DiscoverScreen() {
   );
   const nFilters = activeFilterCount(filters);
 
-  const onChangeArea = () => {
-    Alert.alert('Event area', 'Where should we look for events?', [
-      {
-        text: 'Use my location',
-        onPress: async () => {
-          try {
-            const { status } = await Location.requestForegroundPermissionsAsync();
-            if (status !== 'granted') return;
-            const pos = await Location.getCurrentPositionAsync({
-              accuracy: Location.Accuracy.Balanced,
-            });
-            useStore
-              .getState()
-              .adoptGpsCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
-          } catch {
-            Alert.alert('Could not get your location');
-          }
-        },
-      },
-      {
-        text: `Demo city (${DEFAULT_CENTER_LABEL})`,
-        onPress: () =>
-          useStore.getState().reseed(DEFAULT_CENTER, DEFAULT_CENTER_LABEL),
-      },
-      { text: 'Cancel', style: 'cancel' },
-    ]);
+  // Geocode a free-text place (Nominatim, via places.ts) and re-center the demo
+  // events on it. A real backend would just re-query events near the hit.
+  const searchArea = (query: string) => {
+    const q = query.trim();
+    if (!q) return;
+    setSearching(true); // clears the list + shows the spinner while we geocode
+    (async () => {
+      // Dev-only test hooks — stripped from production/release bundles by the
+      // __DEV__ guard. 11111 = an empty area (test the no-events state);
+      // 22222 = a slow lookup (test the loading state).
+      if (__DEV__ && q === '11111') {
+        useStore.setState({ events: {}, centerLabel: 'ZIP 11111' });
+        setSearching(false);
+        return;
+      }
+      if (__DEV__ && q === '22222') {
+        await new Promise((resolve) => setTimeout(resolve, 3000));
+        const s = useStore.getState();
+        s.reseed(s.center, 'ZIP 22222');
+        setSearching(false);
+        return;
+      }
+      const hit = await geocodeLocation(q).catch(() => null);
+      if (!hit) {
+        setSearching(false);
+        Alert.alert('Place not found', `Couldn't find "${q}". Try a city, neighborhood, or ZIP.`);
+        return;
+      }
+      useStore.getState().reseed({ lat: hit.lat, lng: hit.lng }, hit.label);
+      setSearching(false);
+    })();
+  };
+
+  const toggleAreaEditor = () => {
+    animateArea();
+    setEditingArea((v) => !v);
+    if (editingArea) {
+      Keyboard.dismiss();
+      setAreaQuery('');
+    }
+  };
+
+  const closeAreaEditor = () => {
+    Keyboard.dismiss();
+    animateArea();
+    setEditingArea(false);
+    setAreaQuery('');
+  };
+
+  const submitArea = () => {
+    if (!areaQuery.trim()) {
+      closeAreaEditor();
+      return;
+    }
+    searchArea(areaQuery);
+    closeAreaEditor();
+  };
+
+  const goToMyLocation = async () => {
+    closeAreaEditor();
+    try {
+      const { status } = await Location.requestForegroundPermissionsAsync();
+      if (status !== 'granted') return;
+      const pos = await Location.getCurrentPositionAsync({
+        accuracy: Location.Accuracy.Balanced,
+      });
+      useStore.getState().adoptGpsCenter({ lat: pos.coords.latitude, lng: pos.coords.longitude });
+    } catch {
+      Alert.alert('Could not get your location');
+    }
   };
 
   return (
@@ -163,13 +221,37 @@ export default function DiscoverScreen() {
             onPress={() => router.push('/map')}
           />
         </View>
-        <Pressable onPress={onChangeArea} style={styles.areaRow} accessibilityRole="button">
+        <Pressable
+          onPress={toggleAreaEditor}
+          style={styles.areaRow}
+          accessibilityRole="button"
+          accessibilityLabel="Change location">
           <Icon sf="mappin.and.ellipse" size={14} color={p.accent} />
           <Text style={[styles.areaText, { color: p.textSecondary }]}>
             {store.centerLabel} · {filters.radiusMi} mi
           </Text>
-          <Icon sf="chevron.down" size={11} color={p.textSecondary} />
+          <Icon sf={editingArea ? 'chevron.up' : 'pencil'} size={12} color={p.textSecondary} />
         </Pressable>
+        {editingArea ? (
+          <View style={[styles.searchRow, { backgroundColor: p.card, borderColor: p.separator }]}>
+            <Icon sf="magnifyingglass" size={16} color={p.textSecondary} />
+            <TextInput
+              value={areaQuery}
+              onChangeText={setAreaQuery}
+              onSubmitEditing={submitArea}
+              returnKeyType="search"
+              placeholder="City, state, or ZIP"
+              placeholderTextColor={p.textSecondary}
+              autoCapitalize="words"
+              autoCorrect={false}
+              autoFocus
+              style={[styles.searchInput, { color: p.text }]}
+            />
+            <Pressable onPress={goToMyLocation} hitSlop={8} accessibilityLabel="Use my location">
+              <Icon sf="location.fill" size={16} color={p.accent} />
+            </Pressable>
+          </View>
+        ) : null}
       </View>
 
       <View style={styles.controls}>
@@ -221,7 +303,11 @@ export default function DiscoverScreen() {
             if (e.nativeEvent.contentOffset.y <= -80) startRefresh();
           }}
           ListHeaderComponent={<Animated.View style={{ height: gap }} />}
-          contentContainerStyle={[styles.list, { paddingBottom: BottomTabInset + Spacing.four }]}
+          contentContainerStyle={[
+            styles.list,
+            { paddingBottom: BottomTabInset + Spacing.four },
+            items.length === 0 && styles.listEmpty,
+          ]}
           ItemSeparatorComponent={() => <View style={{ height: Spacing.three }} />}
           ListEmptyComponent={
             <EmptyState
@@ -233,7 +319,22 @@ export default function DiscoverScreen() {
             />
           }
         />
+        {/* Opaque cover over just the events list — header + controls stay put. */}
+        {searching ? (
+          <View style={[styles.listCover, { backgroundColor: p.background }]} />
+        ) : null}
       </View>
+
+      {/* Transparent full-window layer so the mascot centers on the screen while
+          the app frame (header, controls, tab bar) remains visible. */}
+      {searching ? (
+        <View style={styles.searchingOverlay} pointerEvents="none">
+          <PawkRefreshLogo size={72} phase="loading" pullProgress={pullProgress} />
+          <Text style={[styles.searchingText, { color: p.textSecondary }]}>
+            Sniffing out events near you…
+          </Text>
+        </View>
+      ) : null}
 
       <FilterSheet
         visible={showFilters}
@@ -250,7 +351,18 @@ const styles = StyleSheet.create({
   header: { paddingHorizontal: Spacing.three, paddingTop: Spacing.two, gap: 2 },
   brandRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   title: { fontSize: 32, fontWeight: '800', fontFamily: Fonts?.rounded },
-  areaRow: { flexDirection: 'row', alignItems: 'center', gap: 5 },
+  searchRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderRadius: Radii.lg,
+    borderWidth: StyleSheet.hairlineWidth,
+    marginTop: 4,
+  },
+  searchInput: { flex: 1, fontSize: 15, fontWeight: '600', paddingVertical: 0 },
+  areaRow: { flexDirection: 'row', alignItems: 'center', gap: 5, paddingVertical: 6 },
   areaText: { fontSize: 13, fontWeight: '600' },
   controls: {
     flexDirection: 'row',
@@ -260,7 +372,17 @@ const styles = StyleSheet.create({
     paddingVertical: Spacing.two,
   },
   list: { paddingHorizontal: Spacing.three, paddingTop: Spacing.one },
+  listEmpty: { flexGrow: 1, justifyContent: 'center' },
   listWrap: { flex: 1, overflow: 'hidden' },
+  listCover: { ...StyleSheet.absoluteFillObject, zIndex: 40 },
+  searchingOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: Spacing.two,
+    zIndex: 50,
+  },
+  searchingText: { fontSize: 14, fontWeight: '600' },
   refreshLogo: {
     position: 'absolute',
     top: 6,
