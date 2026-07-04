@@ -69,7 +69,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [ ] Real cover-photo upload (currently placedog.net)
 - [ ] Edit event (notify attendees of time/place changes)
 - [ ] Host dashboard: attendee + pet list, headcount incl. dogs
-- [ ] Recurring events (weekly / biweekly / monthly) — recurrence option in the post wizard; auto-advance to the next occurrence instead of archiving
+- [x] Recurring events (weekly / biweekly / monthly) — recurrence option in the post wizard; auto-advances to the next occurrence instead of archiving
 
 ## EPIC 6 — RSVP & Attendance  🟢
 - [ ] Choose which pet(s) you're bringing on RSVP
