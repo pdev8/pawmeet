@@ -26,6 +26,7 @@ import {
   eventDistanceMi,
   goingRsvps,
   interestedRsvps,
+  isFavorite,
   isHost,
   myRsvp,
   pendingRsvps,
@@ -248,6 +249,7 @@ export default function EventScreen() {
   const address = visibleAddress(store, event);
   const dist = eventDistanceMi(event, store.center);
   const left = spotsLeft(store, event);
+  const favorite = isFavorite(store, event.id);
   const hostedCount = Object.values(store.events).filter(
     (e) => e.hostId === event.hostId,
   ).length;
@@ -260,12 +262,25 @@ export default function EventScreen() {
         <ScrollView contentContainerStyle={{ paddingBottom: 140 }}>
           <View>
             <Image source={{ uri: event.coverPhotoUrl }} style={styles.hero} contentFit="cover" />
-            <View style={[styles.heroChips, { top: insets.top + 6 }]}>
+            <View style={styles.heroChips}>
               <Chip small label={VENUE_LABELS[event.venueType]} sf={VENUE_ICONS[event.venueType]} />
               {event.breedFocus ? (
                 <Chip small label={event.breedFocus} sf="pawprint.fill" />
               ) : null}
             </View>
+            <Pressable
+              onPress={() => store.toggleFavorite(event.id)}
+              accessibilityRole="button"
+              accessibilityLabel={favorite ? 'Remove from saved' : 'Save event'}
+              style={styles.heroFav}>
+              <Glass style={styles.heroFavGlass}>
+                <Icon
+                  sf={favorite ? 'heart.fill' : 'heart'}
+                  size={20}
+                  color={favorite ? p.accent : p.text}
+                />
+              </Glass>
+            </Pressable>
           </View>
 
           <View style={styles.content}>
@@ -396,7 +411,8 @@ const styles = StyleSheet.create({
   hero: { width: '100%', aspectRatio: 16 / 10 },
   heroChips: {
     position: 'absolute',
-    right: Spacing.three,
+    left: Spacing.three,
+    bottom: Spacing.three,
     flexDirection: 'row',
     gap: 6,
   },
@@ -448,6 +464,14 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  heroFav: { position: 'absolute', right: Spacing.three, bottom: Spacing.three },
+  heroFavGlass: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
     alignItems: 'center',
     justifyContent: 'center',
   },
