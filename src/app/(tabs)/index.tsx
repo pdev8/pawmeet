@@ -9,6 +9,7 @@ import {
   LayoutAnimation,
   Platform,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   TextInput,
@@ -30,8 +31,10 @@ import { usePalette } from '@/hooks/use-palette';
 import {
   activeFilterCount,
   DEFAULT_FILTERS,
+  describeFilters,
   discoverEvents,
   type Filters,
+  type SavedSearch,
   type SortMode,
 } from '@/lib/filters';
 import { geocodeLocation } from '@/lib/places';
@@ -207,6 +210,41 @@ export default function DiscoverScreen() {
     }
   };
 
+  // Snapshot the current filters + area as a one-tap saved search.
+  const onSaveSearch = () => {
+    Alert.prompt(
+      'Save this search',
+      `${describeFilters(filters)} · ${store.centerLabel}`,
+      (name) =>
+        useStore.getState().saveSearch(name ?? '', filters, store.center, store.centerLabel),
+      'plain-text',
+      filters.breed ?? store.centerLabel,
+    );
+  };
+
+  // Re-run a saved search: restore its filters, and its area if it differs.
+  const applySearch = (ss: SavedSearch) => {
+    setFilters(ss.filters);
+    if (
+      ss.center.lat !== store.center.lat ||
+      ss.center.lng !== store.center.lng ||
+      ss.centerLabel !== store.centerLabel
+    ) {
+      useStore.getState().reseed(ss.center, ss.centerLabel);
+    }
+  };
+
+  const onDeleteSearch = (ss: SavedSearch) => {
+    Alert.alert('Delete saved search?', ss.label, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => useStore.getState().deleteSavedSearch(ss.id),
+      },
+    ]);
+  };
+
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p.background }]} edges={['top']}>
       <View style={styles.header}>
@@ -265,6 +303,7 @@ export default function DiscoverScreen() {
           />
         ))}
         <View style={{ flex: 1 }} />
+        <Chip small sf="bookmark" label="Save" onPress={onSaveSearch} />
         <Chip
           small
           sf="line.3.horizontal.decrease.circle"
@@ -273,6 +312,24 @@ export default function DiscoverScreen() {
           onPress={() => setShowFilters(true)}
         />
       </View>
+
+      {store.savedSearches.length > 0 ? (
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          contentContainerStyle={styles.savedRow}>
+          {store.savedSearches.map((ss) => (
+            <Chip
+              key={ss.id}
+              small
+              sf="bookmark.fill"
+              label={ss.label}
+              onPress={() => applySearch(ss)}
+              onLongPress={() => onDeleteSearch(ss)}
+            />
+          ))}
+        </ScrollView>
+      ) : null}
 
       <View style={styles.listWrap}>
         <Animated.View
@@ -371,6 +428,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: Spacing.three,
     paddingVertical: Spacing.two,
   },
+  savedRow: { flexDirection: 'row', gap: 6, paddingHorizontal: Spacing.three, paddingBottom: Spacing.two },
   list: { paddingHorizontal: Spacing.three, paddingTop: Spacing.one },
   listEmpty: { flexGrow: 1, justifyContent: 'center' },
   listWrap: { flex: 1, overflow: 'hidden' },

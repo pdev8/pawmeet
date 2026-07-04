@@ -8,6 +8,7 @@ export function Chip({
   label,
   selected = false,
   onPress,
+  onLongPress,
   sf,
   small = false,
   style,
@@ -15,6 +16,7 @@ export function Chip({
   label: string;
   selected?: boolean;
   onPress?: () => void;
+  onLongPress?: () => void;
   sf?: string;
   small?: boolean;
   style?: ViewStyle;
@@ -25,7 +27,8 @@ export function Chip({
   return (
     <Pressable
       onPress={onPress}
-      disabled={!onPress}
+      onLongPress={onLongPress}
+      disabled={!onPress && !onLongPress}
       accessibilityRole={onPress ? 'button' : undefined}
       accessibilityState={{ selected }}
       style={({ pressed }) => [

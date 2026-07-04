@@ -3,6 +3,7 @@ import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
 import { isArchivable } from './dates';
+import type { Filters, SavedSearch } from './filters';
 import { DEFAULT_CENTER, DEFAULT_CENTER_LABEL } from './geo';
 import { buildSeed, ME_ID } from './seed';
 import type {
@@ -47,6 +48,7 @@ interface AppState {
   notifications: AppNotification[];
   placeReviews: Record<string, StoredPlaceReview[]>;
   favorites: string[];
+  savedSearches: SavedSearch[];
   draft: Partial<EventDraft> | null;
 
   setHasHydrated: (v: boolean) => void;
@@ -73,6 +75,9 @@ interface AppState {
   deletePlaceReview: (placeId: string, reviewId: string) => void;
 
   toggleFavorite: (eventId: string) => void;
+
+  saveSearch: (label: string, filters: Filters, center: LatLng, centerLabel: string) => void;
+  deleteSavedSearch: (id: string) => void;
 
   updateProfile: (displayName: string) => void;
   addPet: (name: string, breed: string, size: PetSize) => void;
@@ -117,6 +122,7 @@ export const useStore = create<AppState>()(
       notifications: [],
       placeReviews: {},
       favorites: [],
+      savedSearches: [],
       draft: null,
 
       setHasHydrated: (v) => set({ hasHydrated: v }),
@@ -482,6 +488,26 @@ export const useStore = create<AppState>()(
         });
       },
 
+      saveSearch: (label, filters, center, centerLabel) => {
+        const name = label.trim();
+        if (!name) return;
+        const s = get();
+        const search: SavedSearch = {
+          id: newId('ss'),
+          label: name,
+          filters,
+          center,
+          centerLabel,
+          createdAt: new Date().toISOString(),
+        };
+        set({ savedSearches: [search, ...s.savedSearches] });
+      },
+
+      deleteSavedSearch: (id) => {
+        const s = get();
+        set({ savedSearches: s.savedSearches.filter((x) => x.id !== id) });
+      },
+
       updateProfile: (displayName) => {
         const s = get();
         const me = s.users[s.currentUserId];
@@ -537,6 +563,7 @@ export const useStore = create<AppState>()(
         notifications: s.notifications,
         placeReviews: s.placeReviews,
         favorites: s.favorites,
+        savedSearches: s.savedSearches,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);

@@ -1,11 +1,12 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 
+import { DEFAULT_FILTERS } from './filters';
 import { ME_ID, useStore } from './store';
 
 const state = () => useStore.getState();
 
 beforeEach(() => {
-  useStore.setState({ placeReviews: {}, favorites: [], currentUserId: ME_ID });
+  useStore.setState({ placeReviews: {}, favorites: [], savedSearches: [], currentUserId: ME_ID });
 });
 
 describe('addPlaceReview', () => {
@@ -92,5 +93,36 @@ describe('toggleFavorite', () => {
     state().toggleFavorite('e1');
     state().toggleFavorite('e1');
     expect(state().favorites).toEqual([]);
+  });
+});
+
+describe('saveSearch / deleteSavedSearch', () => {
+  const austin = { lat: 30.27, lng: -97.74 };
+
+  it('saves a named search (newest first) with a trimmed label', () => {
+    state().saveSearch('  Goldens near home  ', DEFAULT_FILTERS, austin, 'Austin, TX');
+    const list = state().savedSearches;
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ label: 'Goldens near home', centerLabel: 'Austin, TX' });
+    expect(list[0].filters).toEqual(DEFAULT_FILTERS);
+  });
+
+  it('prepends newer searches', () => {
+    state().saveSearch('first', DEFAULT_FILTERS, austin, 'Austin, TX');
+    state().saveSearch('second', DEFAULT_FILTERS, austin, 'Austin, TX');
+    expect(state().savedSearches.map((s) => s.label)).toEqual(['second', 'first']);
+  });
+
+  it('ignores a blank label', () => {
+    state().saveSearch('   ', DEFAULT_FILTERS, austin, 'Austin, TX');
+    expect(state().savedSearches).toHaveLength(0);
+  });
+
+  it('deletes by id', () => {
+    state().saveSearch('keep', DEFAULT_FILTERS, austin, 'Austin, TX');
+    state().saveSearch('drop', DEFAULT_FILTERS, austin, 'Austin, TX');
+    const dropId = state().savedSearches.find((s) => s.label === 'drop')!.id;
+    state().deleteSavedSearch(dropId);
+    expect(state().savedSearches.map((s) => s.label)).toEqual(['keep']);
   });
 });

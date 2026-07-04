@@ -24,6 +24,37 @@ export const DEFAULT_FILTERS: Filters = {
   sort: 'soonest',
 };
 
+/**
+ * A saved search snapshots the discovery filters plus the area they applied to,
+ * so it can be re-run with one tap. (Alerting when new matches appear is a
+ * separate, backend-dependent feature — see BACKLOG Epic 8.)
+ */
+export interface SavedSearch {
+  id: string;
+  label: string;
+  filters: Filters;
+  center: LatLng;
+  centerLabel: string;
+  createdAt: string;
+}
+
+/** A short human summary of a filter set, e.g. "Golden Retriever · 25 mi · This weekend". */
+export function describeFilters(f: Filters): string {
+  const parts: string[] = [];
+  if (f.breed) parts.push(f.breed);
+  parts.push(`${f.radiusMi} mi`);
+  const windowLabels: Record<DateWindow, string> = {
+    today: 'Today',
+    weekend: 'This weekend',
+    '7d': 'Next 7 days',
+    '30d': 'Next 30 days',
+  };
+  parts.push(windowLabels[f.dateWindow]);
+  if (f.venues.length > 0) parts.push(`${f.venues.length} venue${f.venues.length > 1 ? 's' : ''}`);
+  if (f.hasSpots) parts.push('Has spots');
+  return parts.join(' · ');
+}
+
 export function activeFilterCount(f: Filters): number {
   let n = 0;
   if (f.radiusMi !== DEFAULT_FILTERS.radiusMi) n++;
