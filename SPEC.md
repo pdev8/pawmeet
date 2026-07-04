@@ -1,7 +1,14 @@
-# PawMeet — Pet Events Near You
+# Pawk — Pet Events Near You
 
-**Status:** Draft spec (planning only — no implementation yet)
-**Last updated:** 2026-07-03
+> Ships as **Pawk** ("PawMeet" was the working title — resolves Open Question 6).
+> The name "PawMeet" persists below only where it names the product in prose.
+
+**Status:** Living spec. A v1 demo implements the M0–M2 social core **and most of
+the M3 map** on a local mock data layer (zustand + AsyncStorage, no backend). This
+document is the product vision + data model; **[BACKLOG.md](BACKLOG.md) is the
+source of truth for what's built and what's next**, including the full path to
+App Store launch. [AGENTS.md](AGENTS.md) documents the code architecture.
+**Last updated:** 2026-07-04
 
 ## 1. Problem Statement
 
@@ -174,6 +181,21 @@ The developer works from both a Windows PC and a Mac; the toolchain must support
 4. Location permission ask (with clear value framing) or manual home area
 5. Optional: create a saved search from their breed + area → drops them onto Discovery pre-filtered
 
+### 5.9 Dog-friendly places map & reviews  *(added post-spec; implemented in v1 demo)*
+Distinct from the Discovery event map — this is a standalone map of **where you
+can take your dog**, sourced live from OpenStreetMap (no API key).
+- **Areas:** dog parks, parks, nature reserves, beaches, and named trails,
+  fetched from Overpass around a searched or GPS center. Rendered as
+  color-coded, crosshatched polygons (trails as dashed lines), one hue per
+  category so a filter chip matches the areas it toggles. Filters scroll on a
+  single row; larger areas and every dog park get a Pawk pin.
+- **Place detail:** OSM opening hours, a blended star rating, "Open in Apple
+  Maps" / website links.
+- **Community reviews:** rate (1–5) + text; add, edit, and delete your own,
+  multiple per place, newest-first. (Demo: mixed with deterministic sample
+  reviews from the mock community and blended into the rating.) *Backend
+  persistence, photos, and review reporting are tracked in BACKLOG Epic 3.*
+
 ## 6. UI / Design System — "Liquid" Direction
 
 - **Materials:** Liquid Glass (iOS 26) for chrome — tab bar, filter bar, RSVP bar, sheets, map overlays. Content (cards, photos) stays opaque for readability; glass is for the layer *above* content.
@@ -206,18 +228,24 @@ The developer works from both a Windows PC and a Mac; the toolchain must support
 
 ## 9. Milestones
 
-**M0 — Foundation (1–2 wks):** Expo project, auth, profiles + pets, design tokens, glass component kit (tab bar, card, sheet, badge row).
-**M1 — Events core (2–3 wks):** event model + PostGIS search API, Discovery list with filters, event detail, post-event flow.
-**M2 — Social layer (2–3 wks):** RSVP flows incl. approval + waitlist, attendee badges everywhere, comments (threads, host moderation, realtime), host dashboard, push notifications.
-**M3 — Map & polish (2 wks):** map view + clustering, saved searches + alerts, empty states, animations, accessibility pass.
-**M4 — Ship:** TestFlight beta (seed with local golden retriever meetup as first event 🐕), moderation basics, App Store review prep.
+> **Status against these milestones lives in [BACKLOG.md](BACKLOG.md).** In short:
+> M0–M2 and most of M3 are built **on a mock data layer** (zustand + AsyncStorage);
+> the outstanding work is the real backend (BACKLOG Epic 1), push (Epic 8),
+> saved-search alerts (Epic 4), and the full launch track (Epic 15). "Built" below
+> means the UX + business rules exist against mock data, not against a server.
+
+**M0 — Foundation:** ✅ built (mock) — profiles + pets, design tokens, glass component kit. ⏳ real auth = Epic 1.
+**M1 — Events core:** ✅ built (mock) — Discovery list + filters, event detail, post-event flow. ⏳ PostGIS search API = Epic 1.
+**M2 — Social layer:** ✅ built (mock) — RSVP incl. approval + waitlist, attendee badges, comments + host moderation, host dashboard. ⏳ realtime + push = Epics 7/8.
+**M3 — Map & polish:** ◐ partial — ✅ dog-friendly map + reviews (§5.9), animations; ⏳ saved searches + alerts (Epic 4/8), map⇄list toggle, full a11y pass (Epic 12).
+**M4 — Ship:** ⏳ the entire launch track = **BACKLOG Epic 15** (App Store submission, legal, prod ops, observability, launch content).
 
 ## 10. Open Questions
 
-1. **Backend:** Supabase (spec'd) vs. Firebase vs. custom API — confirm before M0.
-2. **Map+list merged** on one Discovery screen (Airbnb-style) vs. separate tabs?
-3. Should "Interested" attendees appear in the card badge row, or only "Going"? (Spec assumes Going only.)
-4. Saved-search alerts in v1 or v1.1? (Spec puts it in M3; it's the strongest retention feature but adds backend jobs.)
-5. Host verification threshold for home events — how much friction?
-6. Name: "PawMeet" is a placeholder.
+1. **Backend:** Supabase (spec'd) vs. Firebase vs. custom API — still open; first task of BACKLOG Epic 1.
+2. **Map+list merged** on one Discovery screen (Airbnb-style) vs. separate tabs? — *Current:* the dog-friendly places map is a **separate pushed screen**; a map⇄list toggle on Discovery is still open (BACKLOG Epic 4).
+3. Should "Interested" attendees appear in the card badge row, or only "Going"? — *Current:* Going only, per spec.
+4. Saved-search alerts in v1 or v1.1? — deferred; tracked in BACKLOG Epics 4 (saved searches) + 8 (alerts).
+5. Host verification threshold for home events — how much friction? — still open (BACKLOG Epic 6).
+6. ~~Name: "PawMeet" is a placeholder.~~ **Resolved → Pawk.**
 7. Monetization later (featured events? breed-club accounts?) — out of scope for now but may influence schema.

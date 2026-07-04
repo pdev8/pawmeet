@@ -1,10 +1,31 @@
 # Pawk — Backlog
 
-Agile backlog for taking Pawk from the v1 mock-data demo toward the full
-[SPEC.md](SPEC.md) scope. Current state: discover / post / RSVP / comment
-flows + the dog-friendly map & place reviews are built on a **local mock
-store** (zustand). The main gaps are SPEC M3: backend, auth, push, saved
-searches, moderation, and onboarding.
+Agile backlog for taking Pawk from the v1 mock-data demo toward launch. This is
+the **source of truth for status**; the other docs cover different angles:
+
+| Doc | Answers |
+|---|---|
+| [SPEC.md](SPEC.md) | product vision + data model (what/why) |
+| **BACKLOG.md** (this) | what's built + what's next (status/roadmap) |
+| [AGENTS.md](AGENTS.md) | how the code is structured (for coding agents) |
+| [README.md](README.md) | how to run it + a demo tour |
+
+## Current state (2026-07-04)
+
+Built on a **local mock store** (zustand + AsyncStorage, no backend), so every
+flow is testable on-device today:
+- **Events:** discover (radius / date / breed / venue filters, sorts), post
+  (5-step wizard), event detail, archive sweep + "Host it again".
+- **Social:** RSVP with capacity → waitlist → promotion, host-approval flow,
+  threaded comments with host moderation. Backend liveness is faked with timers.
+- **Dog-friendly map:** live OpenStreetMap areas (dog parks / parks / reserves /
+  beaches / trails), one color per category driving polygons + hatch + filter
+  chips, place detail with hours, and **community reviews** (add / edit / delete
+  your own, on-device only).
+- **Tooling:** ESLint wired up (`npx expo lint`); web preview bundles.
+
+Everything is against **mock data** — the real backend (Epic 1) is the keystone
+that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 
 **Legend:** 🟢 independent (grab anytime) · 🔴 blocks/unblocks others · ⭐ suggested next · 🚫 App Store submission blocker (Apple rejects without it)
 

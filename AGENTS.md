@@ -1,8 +1,13 @@
 # Pawk — guidance for coding agents
 
-Pawk is an iOS-first pet-events app (discover / post / RSVP / comment) built with
-Expo + React Native + TypeScript. [SPEC.md](SPEC.md) is the product source of truth;
-[README.md](README.md) lists what's deliberately mocked in this v1 demo build.
+Pawk is an iOS-first pet-events app (discover / post / RSVP / comment) with a
+dog-friendly places map, built with Expo + React Native + TypeScript.
+
+- [SPEC.md](SPEC.md) — product vision + data model (the "what/why").
+- [BACKLOG.md](BACKLOG.md) — current state + roadmap to App Store launch (the
+  "what's done / what's next"); the single source for status.
+- [README.md](README.md) — how to run it + a demo tour of what to try.
+- This file (AGENTS.md, included by CLAUDE.md) — how the code is structured.
 
 ## Hard constraint: Expo SDK 54, pinned to Expo Go
 
@@ -25,12 +30,14 @@ Expo docs for this version: https://docs.expo.dev/versions/v54.0.0/
 npm start                                  # Expo dev server; scan QR with Expo Go (same Wi-Fi; --tunnel if blocked)
 npx tsc --noEmit                           # typecheck — run after every change; there are no tests
 npx expo export --platform ios --output-dir dist-check   # verifies the bundle compiles; delete dist-check after
-npx expo lint                              # eslint
+npx expo lint                              # eslint (eslint + eslint-config-expo are now installed)
 npx expo install --fix                     # realign dependency versions to the SDK
 ```
 
 There is no test suite. Verification = typecheck + bundle export + the user
-running it on-device. Nobody can run the iOS app on this Windows machine.
+running it on-device. The `/verify-ios` skill runs the typecheck + export +
+cleanup in one step. The iOS app can only be exercised on the user's iPhone via
+Expo Go — neither this machine nor CI can run it.
 
 ## Architecture
 
@@ -60,8 +67,28 @@ haversine, date windows, breed filter that inclusively matches all-breeds events
 
 **Routing:** Expo Router, `src/app/` (note `src/` root, alias `@/*` → `src/*`).
 Root Stack → `(tabs)` (native tabs: Discover / Post / Inbox / Profile) →
-`event/[id]` detail. The Post tab is a 5-step wizard that also serves
-"Host it again" via `store.draft`.
+`event/[id]` detail and the `map` screen (pushed from Discover). The Post tab is
+a 5-step wizard that also serves "Host it again" via `store.draft`.
+
+**Dog-friendly map (`src/app/map.tsx`).** Live OpenStreetMap data, no API key:
+`src/lib/places.ts` queries Overpass for dog parks / parks / nature reserves /
+beaches / trails around a center (and Nominatim for the search box); results are
+capped for map perf. Each category has one distinct hue in `CATEGORY_COLORS`
+(green/teal/olive/blue/orange) that drives the polygon fill, outline, hatch, and
+the filter chip together, so a chip visually matches the areas it toggles.
+`src/lib/hatch.ts` scan-line-clips crosshatch segments to each polygon (density
+tuned by `spacingM` / `maxLinesPerDirection`). Place detail sheet shows OSM hours
++ **community reviews**: `placeReviews` in the store (keyed by place id, one entry
+per review — add / edit / delete your own, multiple per place) merged newest-first
+above deterministic demo reviews from `demoReviews()`, blended into a headline
+rating. The review composer is inline in the sheet, lifted over the keyboard with
+`KeyboardAvoidingView` (the sheet floats at the bottom over the map).
+
+**Web preview.** The app is iOS-first, but `metro.config.js` adds a web-only
+resolver (react-native-maps → empty, zustand → CJS build) and `map.web.tsx` is a
+placeholder so `npx expo start --web` bundles for testing non-map flows in a
+browser. Native builds are unaffected — the resolver only branches on
+`platform === 'web'`.
 
 **UI system:** palette in `src/constants/theme.ts` via `usePalette()` (light +
 dark, amber accent). `Glass` (`src/components/glass.tsx`) is the Liquid Glass
