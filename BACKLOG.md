@@ -117,7 +117,9 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [ ] CI: typecheck + lint + expo export on PRs
 
 ## EPIC 14 — Tech Debt / Quality  🟢
-- [ ] Add a test suite (currently none — verification is typecheck + export + device)
+- [x] Add a test suite — Vitest unit tests for pure `src/lib` logic (`npm test`)
+- [ ] Extend test coverage: filters/discovery, selectors (address privacy), dates, seed
+- [ ] Component/interaction tests once a RN-aware runner is added (jest-expo or RNTL)
 - [ ] Fix lint findings now that ESLint is wired up
 - [ ] Web-preview parity pass (map.web stub, etc.)
 

@@ -28,16 +28,21 @@ Expo docs for this version: https://docs.expo.dev/versions/v54.0.0/
 
 ```
 npm start                                  # Expo dev server; scan QR with Expo Go (same Wi-Fi; --tunnel if blocked)
-npx tsc --noEmit                           # typecheck — run after every change; there are no tests
+npx tsc --noEmit                           # typecheck — run after every change
+npm test                                   # vitest — unit tests for pure logic in src/lib
 npx expo export --platform ios --output-dir dist-check   # verifies the bundle compiles; delete dist-check after
-npx expo lint                              # eslint (eslint + eslint-config-expo are now installed)
+npx expo lint                              # eslint (eslint + eslint-config-expo are installed)
 npx expo install --fix                     # realign dependency versions to the SDK
 ```
 
-There is no test suite. Verification = typecheck + bundle export + the user
-running it on-device. The `/verify-ios` skill runs the typecheck + export +
-cleanup in one step. The iOS app can only be exercised on the user's iPhone via
-Expo Go — neither this machine nor CI can run it.
+Verification = typecheck + `npm test` + bundle export + the user running it
+on-device. The `/verify-ios` skill runs all three checks + cleanup in one step.
+Tests (Vitest, `src/lib/*.test.ts`) cover the pure logic only — geometry
+(`hatch`), review math (`reviews`), OSM categorization/rating (`places`), and the
+store's review business rules; they run in plain Node with AsyncStorage mocked
+(`test/mocks/`, aliased in `vitest.config.ts`), so they never touch Metro/Expo and
+leave the SDK-54 pin alone. The RN components and the running app can only be
+exercised on the user's iPhone via Expo Go — neither this machine nor CI can.
 
 ## Architecture
 
