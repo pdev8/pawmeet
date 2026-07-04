@@ -57,17 +57,19 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [ ] Report / flag a review (ties into moderation epic)
 
 ## EPIC 4 — Discovery / Search  🟢 ⭐
-- [ ] "Has spots left" toggle
-- [ ] Map ⇄ list toggle on the Discover screen
-- [ ] Saved searches ("goldens within 25 mi") — the retention hook
-- [ ] Real place geocoding for search (MapKit / Nominatim)
-- [ ] Empty-state CTA: "host the first event in this area"
+- [x] "Has spots left" toggle — already in the filter sheet
+- [x] Empty-state CTA: "host the first event in this area" — already wired
+- [ ] Real place geocoding for the area picker (Nominatim) — 🔬 in review: `epic4/geocoding-area-search`
+- [ ] Saved searches ("goldens within 25 mi") — save + apply 🔬 in review: `epic4/saved-searches`; alerts need Epic 8
+- [ ] Favorite / bookmark events → a Saved list (heart on cards + detail; Saved section on Profile)
+- [ ] Map ⇄ list toggle on the Discover screen — deferred: needs device-in-loop (touches the pull-to-refresh animation)
 
 ## EPIC 5 — Post / Host an Event  🟢
 - [ ] Address autocomplete (MapKit search) in the Where step
 - [ ] Real cover-photo upload (currently placedog.net)
 - [ ] Edit event (notify attendees of time/place changes)
 - [ ] Host dashboard: attendee + pet list, headcount incl. dogs
+- [ ] Recurring events (weekly / biweekly / monthly) — recurrence option in the post wizard; auto-advance to the next occurrence instead of archiving
 
 ## EPIC 6 — RSVP & Attendance  🟢
 - [ ] Choose which pet(s) you're bringing on RSVP
