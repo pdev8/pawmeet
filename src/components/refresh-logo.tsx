@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Animated, Easing } from 'react-native';
 import Svg, { Path } from 'react-native-svg';
 
@@ -13,7 +13,7 @@ import {
 } from './logo';
 import { usePalette } from '@/hooks/use-palette';
 
-export type RefreshPhase = 'idle' | 'shake' | 'spin';
+export type RefreshPhase = 'idle' | 'shake' | 'spin' | 'loading';
 
 // Comic twirl arcs circling the face (head center ≈ 60,52 in viewBox coords).
 const SWIRL_ARCS = [
@@ -44,6 +44,9 @@ export function PawkRefreshLogo({
   const stroke = strokeProps(p.accent);
   const shake = useRef(new Animated.Value(0)).current;
   const spin = useRef(new Animated.Value(0)).current;
+  // In the looping `loading` phase we cycle shake → spin ourselves; this tracks
+  // which half is currently on screen so the render picks the right visuals.
+  const [loadingSub, setLoadingSub] = useState<'shake' | 'spin'>('shake');
 
   useEffect(() => {
     if (phase === 'shake') {
@@ -86,6 +89,50 @@ export function PawkRefreshLogo({
         useNativeDriver: false,
       }).start();
       return () => spin.setValue(0);
+    }
+    if (phase === 'loading') {
+      // Loop the same shake → spin choreography as pull-to-refresh.
+      let cancelled = false;
+      let shakeAnim: Animated.CompositeAnimation | null = null;
+      const timers: ReturnType<typeof setTimeout>[] = [];
+
+      const cycle = () => {
+        if (cancelled) return;
+        setLoadingSub('shake');
+        shake.setValue(0);
+        shakeAnim = Animated.loop(
+          Animated.sequence([
+            Animated.timing(shake, { toValue: 1, duration: 60, easing: Easing.linear, useNativeDriver: false }),
+            Animated.timing(shake, { toValue: -1, duration: 120, easing: Easing.linear, useNativeDriver: false }),
+            Animated.timing(shake, { toValue: 0, duration: 60, easing: Easing.linear, useNativeDriver: false }),
+          ]),
+        );
+        shakeAnim.start();
+        timers.push(
+          setTimeout(() => {
+            if (cancelled) return;
+            shakeAnim?.stop();
+            setLoadingSub('spin');
+            spin.setValue(0);
+            Animated.timing(spin, {
+              toValue: 1,
+              duration: 700,
+              easing: Easing.out(Easing.cubic),
+              useNativeDriver: false,
+            }).start(({ finished }) => {
+              if (finished && !cancelled) cycle();
+            });
+          }, 1000),
+        );
+      };
+      cycle();
+      return () => {
+        cancelled = true;
+        shakeAnim?.stop();
+        timers.forEach(clearTimeout);
+        shake.setValue(0);
+        spin.setValue(0);
+      };
     }
   }, [phase, shake, spin]);
 
@@ -149,16 +196,21 @@ export function PawkRefreshLogo({
     outputRange: [earPath(RIGHT_EAR_POSES[0]), earPath(RIGHT_EAR_POSES[1])],
   });
 
-  const leftD = phase === 'shake' ? shakeLeftD : phase === 'spin' ? spinLeftD : pullLeftD;
-  const rightD = phase === 'shake' ? shakeRightD : phase === 'spin' ? spinRightD : pullRightD;
-  const rotate = phase === 'shake' ? headTilt : phase === 'spin' ? spinRotate : '0deg';
+  // During `loading` the visible half is driven by loadingSub; otherwise the
+  // phase maps directly.
+  const active = phase === 'loading' ? loadingSub : phase;
+  const shaking = active === 'shake';
+  const spinning = active === 'spin';
+  const leftD = shaking ? shakeLeftD : spinning ? spinLeftD : pullLeftD;
+  const rightD = shaking ? shakeRightD : spinning ? spinRightD : pullRightD;
+  const rotate = shaking ? headTilt : spinning ? spinRotate : '0deg';
 
   return (
     <Animated.View style={{ transform: [{ rotate }] }}>
       {/* Widened viewBox so the swirl arcs fit around the face; its center
           matches the head center so the spin pivots on the nose. */}
       <Svg width={size * 1.3} height={size * 1.3} viewBox="-15 -20 150 145">
-        {phase === 'spin'
+        {spinning
           ? SWIRL_ARCS.map((d) => (
               <AnimatedSvgPath
                 key={d}
