@@ -2,12 +2,13 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { create } from 'zustand';
 import { createJSONStorage, persist } from 'zustand/middleware';
 
-import { isArchivable } from './dates';
+import { advanceByRecurrence, isArchivable } from './dates';
 import { DEFAULT_CENTER, DEFAULT_CENTER_LABEL } from './geo';
 import { buildSeed, ME_ID } from './seed';
 import type {
   AppNotification,
   EventComment,
+  EventRecurrence,
   LatLng,
   Pet,
   PetEvent,
@@ -30,6 +31,7 @@ export interface EventDraft {
   breedFocus?: string;
   capacity?: number;
   rsvpMode: 'open' | 'host_approves';
+  recurrence?: EventRecurrence;
   useMyLocation: boolean;
 }
 
@@ -147,14 +149,23 @@ export const useStore = create<AppState>()(
         let changed = false;
         const events = { ...s.events };
         for (const ev of Object.values(events)) {
-          if (ev.status !== 'archived' && isArchivable(ev.endsAt)) {
-            events[ev.id] = {
-              ...ev,
-              status: 'archived',
-              archivedAt: new Date().toISOString(),
-            };
-            changed = true;
+          if (ev.status === 'archived' || !isArchivable(ev.endsAt)) continue;
+          // Active recurring events roll forward to their next future
+          // occurrence instead of archiving; a backend would materialize the
+          // next instance. Cancelled series still archive.
+          if (ev.recurrence && ev.status === 'active') {
+            let starts = new Date(ev.startsAt);
+            let ends = new Date(ev.endsAt);
+            const now = Date.now();
+            for (let guard = 0; starts.getTime() <= now && guard < 120; guard++) {
+              starts = advanceByRecurrence(starts, ev.recurrence);
+              ends = advanceByRecurrence(ends, ev.recurrence);
+            }
+            events[ev.id] = { ...ev, startsAt: starts.toISOString(), endsAt: ends.toISOString() };
+          } else {
+            events[ev.id] = { ...ev, status: 'archived', archivedAt: new Date().toISOString() };
           }
+          changed = true;
         }
         if (changed) set({ events });
       },
@@ -388,6 +399,7 @@ export const useStore = create<AppState>()(
           breedFocus: input.breedFocus,
           capacity: input.capacity,
           rsvpMode: input.rsvpMode,
+          recurrence: input.recurrence,
           status: 'active',
         };
         const myPetIds = Object.values(s.pets)

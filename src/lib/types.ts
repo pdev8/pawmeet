@@ -9,6 +9,7 @@ export type RsvpStatus =
   | 'cancelled';
 export type RsvpMode = 'open' | 'host_approves';
 export type PetSize = 'S' | 'M' | 'L';
+export type EventRecurrence = 'weekly' | 'biweekly' | 'monthly';
 
 export interface LatLng {
   lat: number;
@@ -59,6 +60,9 @@ export interface PetEvent {
   breedFocus?: string;
   capacity?: number;
   rsvpMode: RsvpMode;
+  /** When set, the event repeats; it rolls forward to its next occurrence
+   *  instead of archiving once it's over (see store.archiveSweep). */
+  recurrence?: EventRecurrence;
   status: EventStatus;
   archivedAt?: string;
 }
@@ -108,6 +112,12 @@ export const VENUE_LABELS: Record<VenueType, string> = {
   dog_park: 'Dog park',
   business: 'Business',
   other: 'Other',
+};
+
+export const RECURRENCE_LABELS: Record<EventRecurrence, string> = {
+  weekly: 'Weekly',
+  biweekly: 'Every 2 weeks',
+  monthly: 'Monthly',
 };
 
 export const VENUE_ICONS: Record<VenueType, string> = {

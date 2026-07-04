@@ -34,7 +34,13 @@ import {
   visibleAddress,
 } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
-import { VENUE_ICONS, VENUE_LABELS, type PetEvent, type User } from '@/lib/types';
+import {
+  RECURRENCE_LABELS,
+  VENUE_ICONS,
+  VENUE_LABELS,
+  type PetEvent,
+  type User,
+} from '@/lib/types';
 
 function AttendeeStrip({
   title,
@@ -315,6 +321,14 @@ export default function EventScreen() {
                 {fmtRange(event.startsAt, event.endsAt)}
               </Text>
             </View>
+            {event.recurrence ? (
+              <View style={styles.infoRow}>
+                <Icon sf="repeat" size={17} color={p.accent} />
+                <Text style={[styles.infoText, { color: p.text }]}>
+                  Repeats {RECURRENCE_LABELS[event.recurrence].toLowerCase()}
+                </Text>
+              </View>
+            ) : null}
             <View style={styles.infoRow}>
               <Icon sf="mappin.and.ellipse" size={17} color={p.accent} />
               <View style={{ flex: 1 }}>

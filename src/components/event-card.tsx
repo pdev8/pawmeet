@@ -11,7 +11,7 @@ import { fmtTime, relDay } from '@/lib/dates';
 import { fmtDistance } from '@/lib/geo';
 import { attendeeBadges, commentCount, isFavorite, spotsLeft } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
-import { VENUE_ICONS, VENUE_LABELS, type PetEvent } from '@/lib/types';
+import { RECURRENCE_LABELS, VENUE_ICONS, VENUE_LABELS, type PetEvent } from '@/lib/types';
 
 export function EventCard({ event, distanceMi }: { event: PetEvent; distanceMi: number }) {
   const p = usePalette();
@@ -40,6 +40,9 @@ export function EventCard({ event, distanceMi }: { event: PetEvent; distanceMi: 
         <View style={styles.coverChips}>
           <Chip small label={VENUE_LABELS[event.venueType]} sf={VENUE_ICONS[event.venueType]} />
           {event.breedFocus ? <Chip small label={event.breedFocus} sf="pawprint.fill" /> : null}
+          {event.recurrence ? (
+            <Chip small label={RECURRENCE_LABELS[event.recurrence]} sf="repeat" />
+          ) : null}
         </View>
         <Pressable
           onPress={() => useStore.getState().toggleFavorite(event.id)}
