@@ -34,3 +34,13 @@ export function useAuth(): { session: Session | null; loading: boolean } {
 export async function signOut(): Promise<void> {
   await supabase.auth.signOut();
 }
+
+/**
+ * Permanently delete the signed-in user's account and all their data (via the
+ * delete_current_user RPC + ON DELETE CASCADE), then end the local session.
+ */
+export async function deleteAccount(): Promise<void> {
+  const { error } = await supabase.rpc('delete_current_user');
+  if (error) throw error;
+  await supabase.auth.signOut();
+}

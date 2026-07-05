@@ -21,7 +21,7 @@ import { EventRow } from '@/components/event-row';
 import { Icon } from '@/components/icon';
 import { BottomTabInset, Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
-import { signOut } from '@/lib/auth';
+import { deleteAccount, signOut } from '@/lib/auth';
 import { BREEDS } from '@/lib/breeds';
 import {
   hostedEvents,
@@ -307,6 +307,30 @@ export default function ProfileScreen() {
             ])
           }>
           <Text style={[styles.reset, { color: p.textSecondary }]}>Sign out</Text>
+        </Pressable>
+
+        <Pressable
+          onPress={() =>
+            Alert.alert(
+              'Delete account?',
+              'This permanently deletes your account and all your data (events, RSVPs, comments, reviews). This cannot be undone.',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                  text: 'Delete account',
+                  style: 'destructive',
+                  onPress: () =>
+                    deleteAccount().catch((e) =>
+                      Alert.alert(
+                        'Couldn’t delete account',
+                        e instanceof Error ? e.message : 'Please try again.',
+                      ),
+                    ),
+                },
+              ],
+            )
+          }>
+          <Text style={[styles.reset, { color: p.danger }]}>Delete account</Text>
         </Pressable>
 
         <Text style={[styles.buildNote, { color: p.textSecondary }]}>
