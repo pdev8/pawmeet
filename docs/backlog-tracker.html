@@ -243,8 +243,8 @@
 // flags: 'indep' 🟢 | 'blocks' 🔴 | 'next' ⭐  (epic-level)   'blocker' 🚫 (task-level)
 const DATA = [
   { n: 1, title: "Backend & Auth", flags: ["blocks"], tasks: [
-    { t: "Decide backend: Supabase (Postgres + PostGIS) vs Firebase" },
-    { t: "Stand up schema: users, pets, events, rsvps, comments, place_reviews, reports" },
+    { t: "Decide backend: Supabase (Postgres + PostGIS)", done: true },
+    { t: "Stand up schema + RLS (profiles, pets, events, rsvps, comments, reports, place_reviews, favorites, notifications)", done: true },
     { t: "Sign in with Apple + email auth", b: true },
     { t: "In-app account deletion flow", b: true },
     { t: "Swap zustand mock store → real data layer (TanStack Query)" },

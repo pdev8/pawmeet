@@ -32,14 +32,14 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 ---
 
 ## EPIC 1 — Backend & Auth  🔴 (unblocks most "real data" work)
-- [ ] Decide backend: Supabase (Postgres + PostGIS) vs Firebase
-- [ ] Stand up schema: users, pets, events, rsvps, comments, place_reviews, reports
-- [ ] Sign in with Apple + email auth  🚫 (SiwA required once email login is offered)
+- [x] Decide backend: Supabase (Postgres + PostGIS)
+- [x] Stand up schema: profiles, pets, events, rsvps, comments, reports + place_reviews / favorites / saved_searches / notifications, with RLS (merged PR #5)
+- [ ] Sign in with Apple + email auth  🚫 (SiwA required once email login is offered) — email works in Expo Go; Apple needs a dev build
 - [ ] In-app account deletion flow  🚫 (Apple requires it for any app with sign-up)
-- [ ] Swap zustand mock store → real data layer (TanStack Query for server cache)
+- [ ] Swap zustand mock store → real data layer (TanStack Query for server cache) — client wiring in progress (`epic1/supabase-client`)
 - [ ] Replace mock timers (host approval ~6s, canned replies ~7s) with real writes
-- [ ] PostGIS radius search (ST_DWithin) to replace client-side haversine
-- [ ] Scheduled archival job (pg_cron hourly, archives events >24h past ends_at)
+- [~] PostGIS radius search — `nearby_events(lat,lng,radius)` RPC created; app still uses haversine until the client layer lands
+- [~] Scheduled archival job — `archive_past_events()` created; enable pg_cron in the dashboard to schedule it hourly
 
 ## EPIC 2 — Map & Places  🟢
 - [ ] Persist filter selections across sessions
