@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 import { ME_ID, useStore } from './store';
 import type { PetEvent } from './types';
@@ -143,5 +143,43 @@ describe('archiveSweep with recurring events', () => {
     });
     state().archiveSweep();
     expect(state().events.e1.startsAt).toBe(future);
+  });
+});
+
+// Regression guards: the mock "backend liveness" setTimeout fakes were retired
+// once host approve/decline and comments went real on Supabase. These lock in
+// that the mock store no longer auto-responds, even after time passes.
+describe('mock store no longer simulates a backend', () => {
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('requestJoin leaves the RSVP pending and never auto-approves', () => {
+    vi.useFakeTimers();
+    const future = daysFromNow(3);
+    useStore.setState({
+      events: { e1: mkEvent({ id: 'e1', hostId: 'u1', startsAt: future, endsAt: future }) },
+      rsvps: [],
+      currentUserId: ME_ID,
+    });
+    state().requestJoin('e1');
+    vi.advanceTimersByTime(30000);
+    const mine = state().rsvps.find((r) => r.eventId === 'e1' && r.userId === ME_ID);
+    expect(mine?.status).toBe('pending_approval');
+  });
+
+  it('addComment adds exactly one comment with no canned host reply', () => {
+    vi.useFakeTimers();
+    const future = daysFromNow(3);
+    useStore.setState({
+      events: { e1: mkEvent({ id: 'e1', hostId: 'u1', startsAt: future, endsAt: future }) },
+      comments: [],
+      currentUserId: ME_ID,
+    });
+    state().addComment('e1', 'Where do we park?');
+    vi.advanceTimersByTime(30000);
+    const forEvent = state().comments.filter((c) => c.eventId === 'e1');
+    expect(forEvent).toHaveLength(1);
+    expect(forEvent[0].authorId).toBe(ME_ID);
   });
 });

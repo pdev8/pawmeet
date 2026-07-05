@@ -55,10 +55,12 @@ Store actions encode the business rules a backend would own:
   start from the root layout. Archived events: hidden from discovery, comments
   locked, backyard addresses scrubbed.
 - `rsvp`/`requestJoin`/`cancelRsvp` — capacity → waitlist, waitlist promotion
-  on cancellation, host-approval flow. `requestJoin` on someone else's event
-  schedules a fake host approval ~6s later (setTimeout); `addComment` on someone
-  else's event schedules a canned host reply ~7s later. These simulate backend
-  liveness — keep them when adding features, replace them when a real backend lands.
+  on cancellation, host-approval flow. These mock-store paths now serve only the
+  seed/demo events; real (Supabase) events go through the TanStack Query hooks in
+  `use-rsvps.ts`/`use-comments.ts`. The old `setTimeout` "backend liveness" fakes
+  (a ~6s auto host-approval in `requestJoin`, a ~7s canned host reply in
+  `addComment`) have been retired now that host approve/decline and comments are
+  real — seed events simply won't auto-respond.
 - `reseed(center, label)` — regenerates all demo data from `src/lib/seed.ts`
   around a geo center (real GPS on first launch, else Austin), preserving the
   user's profile/pets.
