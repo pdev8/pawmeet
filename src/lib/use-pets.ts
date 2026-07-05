@@ -12,7 +12,7 @@ interface DbPet {
   size: PetSize;
 }
 
-type PetInput = { name: string; breed: string; size: PetSize };
+type PetInput = { name: string; breed: string; size: PetSize; photoUrl?: string };
 type PetPatch = Partial<PetInput>;
 
 function toPet(row: DbPet): Pet {
@@ -51,14 +51,20 @@ export async function addPet(input: PetInput): Promise<void> {
     name: input.name,
     breed: input.breed,
     size: input.size,
-    // Placeholder pet photo until real uploads land (see BACKLOG Epic 5).
-    photo_url: `https://placedog.net/300/300?id=${60 + Math.floor(Math.random() * 40)}`,
+    // A picked-and-uploaded photo, else a placeholder from placedog.net.
+    photo_url:
+      input.photoUrl ?? `https://placedog.net/300/300?id=${60 + Math.floor(Math.random() * 40)}`,
   });
   if (error) throw error;
 }
 
 export async function updatePet(id: string, patch: PetPatch): Promise<void> {
-  const { error } = await supabase.from('pets').update(patch).eq('id', id);
+  const row: Record<string, unknown> = {};
+  if (patch.name !== undefined) row.name = patch.name;
+  if (patch.breed !== undefined) row.breed = patch.breed;
+  if (patch.size !== undefined) row.size = patch.size;
+  if (patch.photoUrl !== undefined) row.photo_url = patch.photoUrl;
+  const { error } = await supabase.from('pets').update(row).eq('id', id);
   if (error) throw error;
 }
 
