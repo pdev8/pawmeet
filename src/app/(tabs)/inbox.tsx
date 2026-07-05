@@ -10,7 +10,46 @@ import { BottomTabInset, Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { timeAgo } from '@/lib/dates';
 import { useStore } from '@/lib/store';
-import type { NotificationType } from '@/lib/types';
+import { useHostPendingRequests, useHostRequestActions } from '@/lib/use-rsvps';
+import type { NotificationType, User } from '@/lib/types';
+
+// Pending join requests on the current user's real (Supabase) hosted events.
+function SupabaseJoinRequests() {
+  const p = usePalette();
+  const { data: requests = [] } = useHostPendingRequests();
+  const actions = useHostRequestActions();
+  if (requests.length === 0) return null;
+  return (
+    <View style={styles.section}>
+      <Text style={[styles.sectionLabel, { color: p.textSecondary }]}>REQUESTS TO JOIN</Text>
+      {requests.map((r) => {
+        const user: User = {
+          id: r.userId,
+          displayName: r.name,
+          avatarUrl: r.avatar ?? '',
+          homeArea: '',
+        };
+        const busy = actions.approve.isPending || actions.decline.isPending;
+        return (
+          <View key={r.rsvpId} style={[styles.card, { backgroundColor: p.card, borderColor: p.separator }]}>
+            <OwnerPetBadge user={user} size={44} />
+            <View style={styles.cardText}>
+              <Text style={[styles.cardTitle, { color: p.text }]}>
+                {user.displayName}
+                <Text style={{ color: p.textSecondary, fontWeight: '400' }}> wants to join </Text>
+                {r.eventTitle}
+              </Text>
+              <View style={styles.actions}>
+                <Chip small label="Approve" selected disabled={busy} onPress={() => actions.approve.mutate(r)} />
+                <Chip small label="Decline" disabled={busy} onPress={() => actions.decline.mutate(r)} />
+              </View>
+            </View>
+          </View>
+        );
+      })}
+    </View>
+  );
+}
 
 const TYPE_ICONS: Record<NotificationType, string> = {
   request_received: 'person.crop.circle.badge.questionmark',
@@ -56,6 +95,7 @@ export default function InboxScreen() {
 
       <ScrollView
         contentContainerStyle={[styles.body, { paddingBottom: BottomTabInset + Spacing.four }]}>
+        <SupabaseJoinRequests />
         {requests.length > 0 ? (
           <View style={styles.section}>
             <Text style={[styles.sectionLabel, { color: p.textSecondary }]}>

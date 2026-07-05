@@ -10,6 +10,7 @@ export function Chip({
   onPress,
   sf,
   small = false,
+  disabled = false,
   style,
 }: {
   label: string;
@@ -17,6 +18,7 @@ export function Chip({
   onPress?: () => void;
   sf?: string;
   small?: boolean;
+  disabled?: boolean;
   style?: ViewStyle;
 }) {
   const p = usePalette();
@@ -25,13 +27,13 @@ export function Chip({
   return (
     <Pressable
       onPress={onPress}
-      disabled={!onPress}
+      disabled={disabled || !onPress}
       accessibilityRole={onPress ? 'button' : undefined}
-      accessibilityState={{ selected }}
+      accessibilityState={{ selected, disabled }}
       style={({ pressed }) => [
         styles.chip,
         small && styles.small,
-        { backgroundColor: bg, opacity: pressed ? 0.8 : 1 },
+        { backgroundColor: bg, opacity: disabled ? 0.4 : pressed ? 0.8 : 1 },
         style,
       ]}>
       {sf ? <Icon sf={sf} size={small ? 12 : 14} color={fg} /> : null}

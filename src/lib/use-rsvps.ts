@@ -102,6 +102,92 @@ export function useCurrentUserId() {
   return useQuery({ queryKey: ['uid'], queryFn: currentUserId });
 }
 
+// ---- Host approve/decline of join requests ----
+
+export interface HostJoinRequest {
+  rsvpId: string;
+  eventId: string;
+  eventTitle: string;
+  capacity: number | null;
+  userId: string;
+  name: string;
+  avatar: string | null;
+}
+
+interface DbJoinRequest {
+  id: string;
+  event_id: string;
+  user_id: string;
+  profiles: { display_name: string; avatar_url: string | null } | null;
+  events: { title: string; capacity: number | null } | null;
+}
+
+/** Pending join requests across the current user's active hosted events. */
+export async function fetchHostPendingRequests(): Promise<HostJoinRequest[]> {
+  const uid = await currentUserId();
+  const { data, error } = await supabase
+    .from('rsvps')
+    .select(
+      'id, event_id, user_id, profiles(display_name, avatar_url), events!inner(title, capacity, host_id, status)',
+    )
+    .eq('status', 'pending_approval')
+    .eq('events.host_id', uid)
+    .eq('events.status', 'active');
+  if (error) throw error;
+  return (data as unknown as DbJoinRequest[]).map((r) => ({
+    rsvpId: r.id,
+    eventId: r.event_id,
+    eventTitle: r.events?.title ?? 'your event',
+    capacity: r.events?.capacity ?? null,
+    userId: r.user_id,
+    name: r.profiles?.display_name ?? 'Someone',
+    avatar: r.profiles?.avatar_url ?? null,
+  }));
+}
+
+/** Approve a request → going, or waitlisted if the event is already at capacity. */
+export async function approveRsvp(
+  rsvpId: string,
+  eventId: string,
+  capacity: number | null,
+): Promise<void> {
+  const counts = await fetchGoingCounts([eventId]);
+  const status = resolveGoingStatus(counts[eventId] ?? 0, capacity);
+  const { error } = await supabase.from('rsvps').update({ status }).eq('id', rsvpId);
+  if (error) throw error;
+}
+
+export async function declineRsvp(rsvpId: string): Promise<void> {
+  const { error } = await supabase
+    .from('rsvps')
+    .update({ status: 'declined_by_host' })
+    .eq('id', rsvpId);
+  if (error) throw error;
+}
+
+export function useHostPendingRequests() {
+  return useQuery({ queryKey: ['host-requests'], queryFn: fetchHostPendingRequests });
+}
+
+/** Approve/decline mutations; refresh the request queue + the event's RSVPs. */
+export function useHostRequestActions() {
+  const qc = useQueryClient();
+  const onSuccess = (eventId: string) => {
+    qc.invalidateQueries({ queryKey: ['host-requests'] });
+    qc.invalidateQueries({ queryKey: ['rsvps', eventId] });
+  };
+  return {
+    approve: useMutation({
+      mutationFn: (r: HostJoinRequest) => approveRsvp(r.rsvpId, r.eventId, r.capacity),
+      onSuccess: (_data, r) => onSuccess(r.eventId),
+    }),
+    decline: useMutation({
+      mutationFn: (r: HostJoinRequest) => declineRsvp(r.rsvpId),
+      onSuccess: (_data, r) => onSuccess(r.eventId),
+    }),
+  };
+}
+
 /** Mutations for the current user's RSVP on an event; refetch the event's RSVPs on success. */
 export function useRsvpActions(eventId: string) {
   const qc = useQueryClient();
