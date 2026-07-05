@@ -96,12 +96,12 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [ ] Optional: create a saved search from breed + area at the end
 
 ## EPIC 10 — Profiles & Badges  🟢
-- [ ] Pet profile screen (photo, breed, size, temperament tags)
+- [~] Pet profile screen (photo, breed, size, temperament tags) — pets shown on the user profile (#27); dedicated editable pet screen still TODO
 - [ ] Achievement badges: First Meetup, Host, 5 Events, Breed Ambassador
-- [ ] Tap attendee badge → mini profile
+- [x] Tap attendee badge → mini profile — user profile screen from attendee strips + comment authors, with report/block (#27); host card (real events) still mock
 
 ## EPIC 11 — Trust, Safety & Moderation  🟢 (launch-critical for a UGC app)
-- [~] Report event / user / comment  🚫 (UGC apps need report or Apple rejects) — event + comment reporting shipped (#20, insert-own RLS); user reporting needs a profile view; admin queue is the operator half
+- [x] Report event / user / comment  🚫 (UGC apps need report or Apple rejects) — event + comment (#20) + user (#27) reporting; admin queue (#21) is the operator half
 - [x] Block user (mutual hide of events, RSVPs, comments)  🚫 — `blocks` table + mutual-hide across discovery/comments/attendees; block from a comment, unblock from Profile (#25)
 - [x] Simple admin moderation-queue web view + a process/owner for reviewing reports — `admins` allowlist + `is_admin` RLS + Moderation panel (resolve/dismiss) in `admin/` (#21); grant admins via SQL insert
 - [x] Age gate (17+) + community guidelines text on events  🚫 — one-time 17+ gate + guidelines screen (Profile + every event) (#23)
