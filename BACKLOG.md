@@ -81,7 +81,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [ ] Realtime new comments while the event screen is open
 - [x] "Host" / "Going" author context chips — live on Supabase-backed comments (#14)
 - [x] 1000-char cap enforcement — DB CHECK + client maxLength (#14); rate limit still TODO
-- [ ] Report a comment
+- [x] Report a comment — shipped with in-app reporting (#20)
 
 ## EPIC 8 — Notifications & Push  🔴 (needs backend)
 - [ ] Expo Notifications + APNs setup
@@ -101,7 +101,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [ ] Tap attendee badge → mini profile
 
 ## EPIC 11 — Trust, Safety & Moderation  🟢 (launch-critical for a UGC app)
-- [ ] Report event / user / comment  🚫 (UGC apps need report or Apple rejects)
+- [~] Report event / user / comment  🚫 (UGC apps need report or Apple rejects) — event + comment reporting shipped (#20, insert-own RLS); user reporting needs a profile view; admin queue is the operator half
 - [ ] Block user (mutual hide of events, RSVPs, comments)  🚫
 - [~] Simple admin moderation-queue web view + a process/owner for reviewing reports — admin console foundation started (`admin/`, read-only Operations/Events/Users, #19); needs `is_admin` role + moderation writes
 - [ ] Age gate (17+) + community guidelines text on events  🚫
