@@ -23,12 +23,12 @@ import { BottomTabInset, Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { deleteAccount, signOut } from '@/lib/auth';
 import { BREEDS } from '@/lib/breeds';
+import { useAddPet, useMyPets, useUpdatePet } from '@/lib/use-pets';
 import { useProfile, useUpdateProfile } from '@/lib/use-profile';
 import {
   hostedEvents,
   myFavoriteEvents,
   myPastEvents,
-  myPets,
   myRsvp,
   myUpcomingEvents,
 } from '@/lib/selectors';
@@ -86,8 +86,10 @@ export default function ProfileScreen() {
   const store = useStore();
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();
+  const { data: pets = [] } = useMyPets();
+  const addPet = useAddPet();
+  const updatePet = useUpdatePet();
   const me = store.users[store.currentUserId];
-  const pets = myPets(store);
   const upcoming = myUpcomingEvents(store);
   const hostedActive = hostedEvents(store, 'active');
   const saved = myFavoriteEvents(store);
@@ -131,13 +133,12 @@ export default function ProfileScreen() {
       return;
     }
     if (petForm.petId) {
-      store.updatePet(petForm.petId, {
-        name,
-        breed: petForm.breed,
-        size: petForm.size,
+      updatePet.mutate({
+        id: petForm.petId,
+        patch: { name, breed: petForm.breed, size: petForm.size },
       });
     } else {
-      store.addPet(name, petForm.breed, petForm.size);
+      addPet.mutate({ name, breed: petForm.breed, size: petForm.size });
     }
     setPetForm(null);
   };
