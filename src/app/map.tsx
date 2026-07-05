@@ -41,6 +41,8 @@ import {
   useUpdatePlaceReview,
 } from '@/lib/use-place-reviews';
 import { blendedRating, mergeReviews, stars } from '@/lib/reviews';
+import { DEFAULT_FILTERS } from '@/lib/filters';
+import { useDiscoverEvents } from '@/lib/use-events';
 import { useCurrentUserId } from '@/lib/use-rsvps';
 import { useStore } from '@/lib/store';
 
@@ -79,6 +81,10 @@ export default function MapScreen() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [enabled, setEnabled] = useState<Set<PlaceCategory>>(new Set(ALL_CATEGORIES));
+  const [showEvents, setShowEvents] = useState(true);
+  // Upcoming events near the area, shown as pins (wide radius so the map is well populated).
+  const eventFilters = useMemo(() => ({ ...DEFAULT_FILTERS, radiusMi: 50 }), []);
+  const { data: eventItems = [] } = useDiscoverEvents(store.center, eventFilters);
   const [selected, setSelected] = useState<DogPlace | null>(null);
   const [myRating, setMyRating] = useState(0);
   const [myText, setMyText] = useState('');
@@ -304,6 +310,21 @@ export default function MapScreen() {
               </View>
             </Marker>
           ))}
+        {showEvents &&
+          eventItems.map(({ event }) => (
+            <Marker
+              key={`ev-${event.id}`}
+              coordinate={{ latitude: event.lat, longitude: event.lng }}
+              anchor={{ x: 0.5, y: 1 }}
+              onPress={(e) => {
+                e.stopPropagation();
+                router.push(`/event/${event.id}`);
+              }}>
+              <View style={[styles.eventPin, { backgroundColor: p.accent, borderColor: p.card }]}>
+                <Icon sf="pawprint.fill" size={14} color={p.onAccent} />
+              </View>
+            </Marker>
+          ))}
       </MapView>
 
       <View style={[styles.topBars, { top: insets.top + 6 }]}>
@@ -330,6 +351,26 @@ export default function MapScreen() {
           showsHorizontalScrollIndicator={false}
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.chipsRow}>
+          <Pressable
+            onPress={() => setShowEvents((v) => !v)}
+            accessibilityRole="button"
+            accessibilityState={{ selected: showEvents }}
+            style={({ pressed }) => [
+              styles.filterChip,
+              {
+                backgroundColor: showEvents ? p.accent : p.card,
+                borderColor: p.accent,
+                opacity: pressed ? 0.85 : 1,
+                flexDirection: 'row',
+                alignItems: 'center',
+                gap: 4,
+              },
+            ]}>
+            <Icon sf="pawprint.fill" size={12} color={showEvents ? p.onAccent : p.accent} />
+            <Text style={[styles.filterLabel, { color: showEvents ? p.onAccent : p.text }]}>
+              Events
+            </Text>
+          </Pressable>
           {ALL_CATEGORIES.map((c) => {
             const active = enabled.has(c);
             const color = CATEGORY_COLORS[c].stroke;
@@ -593,6 +634,18 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     borderWidth: 2,
     padding: 4,
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  eventPin: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
     shadowColor: '#000',
     shadowOpacity: 0.25,
     shadowRadius: 3,
