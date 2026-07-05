@@ -66,4 +66,31 @@ describe('rankDiscoverEvents', () => {
     });
     expect(out.map((i) => i.event.id)).toEqual(['near', 'far']);
   });
+
+  it('applies going counts from the map and defaults missing ones to 0', () => {
+    const out = rankDiscoverEvents([ev({ id: 'a' }), ev({ id: 'b' })], CENTER, DEFAULT_FILTERS, {
+      a: 5,
+    });
+    const byId = Object.fromEntries(out.map((i) => [i.event.id, i.goingCount]));
+    expect(byId).toEqual({ a: 5, b: 0 });
+  });
+
+  it('popular sort orders by going count', () => {
+    const out = rankDiscoverEvents(
+      [ev({ id: 'quiet' }), ev({ id: 'busy' })],
+      CENTER,
+      { ...DEFAULT_FILTERS, sort: 'popular' },
+      { busy: 9, quiet: 1 },
+    );
+    expect(out.map((i) => i.event.id)).toEqual(['busy', 'quiet']);
+  });
+
+  it('has-spots filter counts going RSVPs against capacity', () => {
+    const events = [ev({ id: 'full', capacity: 2 }), ev({ id: 'open', capacity: 5 })];
+    const out = rankDiscoverEvents(events, CENTER, { ...DEFAULT_FILTERS, hasSpots: true }, {
+      full: 2,
+      open: 2,
+    });
+    expect(out.map((i) => i.event.id)).toEqual(['open']);
+  });
 });

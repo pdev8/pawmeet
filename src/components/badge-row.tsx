@@ -36,7 +36,7 @@ export function BadgeRow({
         ))}
       </View>
       <Text style={[styles.label, { color: p.textSecondary }]}>
-        {extra > 0 ? `+${extra} more going` : `${goingCount} going`}
+        {badges.length > 0 && extra > 0 ? `+${extra} more going` : `${goingCount} going`}
       </Text>
     </View>
   );

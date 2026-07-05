@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { rankDiscoverEvents, type DiscoveryItem, type Filters } from './filters';
+import { fetchGoingCounts } from './use-rsvps';
 import { supabase } from './supabase';
 import type {
   EventRecurrence,
@@ -82,7 +83,9 @@ export async function fetchDiscoverEvents(center: LatLng, filters: Filters): Pro
     .eq('status', 'active')
     .eq('visibility', 'public');
   if (error) throw error;
-  return rankDiscoverEvents((data as DbEvent[]).map(toEvent), center, filters);
+  const events = (data as DbEvent[]).map(toEvent);
+  const goingCounts = await fetchGoingCounts(events.map((e) => e.id));
+  return rankDiscoverEvents(events, center, filters, goingCounts);
 }
 
 export async function fetchEventById(id: string): Promise<PetEvent | null> {

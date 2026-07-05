@@ -7,6 +7,8 @@ export interface EventRsvp {
   id: string;
   userId: string;
   status: RsvpStatus;
+  name?: string;
+  avatar?: string | null;
 }
 
 /** Whether a "going" RSVP fits under capacity, or must go on the waitlist. */
@@ -31,17 +33,47 @@ async function currentUserId(): Promise<string> {
   return user.id;
 }
 
+interface DbRsvp {
+  id: string;
+  user_id: string;
+  status: RsvpStatus;
+  profiles: { display_name: string; avatar_url: string | null } | null;
+}
+
 export async function fetchEventRsvps(eventId: string): Promise<EventRsvp[]> {
   const { data, error } = await supabase
     .from('rsvps')
-    .select('id, user_id, status')
+    .select('id, user_id, status, profiles(display_name, avatar_url)')
     .eq('event_id', eventId);
   if (error) throw error;
-  return (data as { id: string; user_id: string; status: RsvpStatus }[]).map((r) => ({
+  return (data as unknown as DbRsvp[]).map((r) => ({
     id: r.id,
     userId: r.user_id,
     status: r.status,
+    name: r.profiles?.display_name,
+    avatar: r.profiles?.avatar_url ?? null,
   }));
+}
+
+/** Tally going RSVPs per event id from a flat rows list. */
+export function tallyGoing(rows: { event_id: string; status: RsvpStatus }[]): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const r of rows) {
+    if (r.status === 'going') counts[r.event_id] = (counts[r.event_id] ?? 0) + 1;
+  }
+  return counts;
+}
+
+/** Going counts keyed by event id, for a batch of events (empty in → empty out). */
+export async function fetchGoingCounts(eventIds: string[]): Promise<Record<string, number>> {
+  if (eventIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from('rsvps')
+    .select('event_id, status')
+    .in('event_id', eventIds)
+    .eq('status', 'going');
+  if (error) throw error;
+  return tallyGoing(data as { event_id: string; status: RsvpStatus }[]);
 }
 
 async function upsertMyRsvp(eventId: string, status: RsvpStatus): Promise<void> {

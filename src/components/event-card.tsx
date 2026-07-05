@@ -9,15 +9,28 @@ import { Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { fmtTime, relDay } from '@/lib/dates';
 import { fmtDistance } from '@/lib/geo';
-import { attendeeBadges, commentCount, isFavorite, spotsLeft } from '@/lib/selectors';
+import { attendeeBadges, commentCount, isFavorite, spotsLeft, type AttendeeBadge } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
 import { RECURRENCE_LABELS, VENUE_ICONS, VENUE_LABELS, type PetEvent } from '@/lib/types';
 
-export function EventCard({ event, distanceMi }: { event: PetEvent; distanceMi: number }) {
+export function EventCard({
+  event,
+  distanceMi,
+  goingCount: goingCountOverride,
+  badges: badgesOverride,
+}: {
+  event: PetEvent;
+  distanceMi: number;
+  // Supabase-sourced Discover passes real counts; without them we read the mock store.
+  goingCount?: number;
+  badges?: AttendeeBadge[];
+}) {
   const p = usePalette();
   const router = useRouter();
   const state = useStore();
-  const { badges, goingCount } = attendeeBadges(state, event.id);
+  const local = attendeeBadges(state, event.id);
+  const badges = badgesOverride ?? local.badges;
+  const goingCount = goingCountOverride ?? local.goingCount;
   const comments = commentCount(state, event.id);
   const left = spotsLeft(state, event);
   const favorite = isFavorite(state, event.id);
