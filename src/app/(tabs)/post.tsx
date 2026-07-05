@@ -1,7 +1,7 @@
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -24,6 +24,7 @@ import { usePalette } from '@/hooks/use-palette';
 import { BREEDS } from '@/lib/breeds';
 import { at } from '@/lib/dates';
 import { offsetMi } from '@/lib/geo';
+import { searchAddresses, type AddressHit } from '@/lib/places';
 import { pickImage, uploadPublicImage } from '@/lib/storage';
 import { useCreateEvent, useUpdateEvent } from '@/lib/use-events';
 import { useStore } from '@/lib/store';
@@ -56,6 +57,9 @@ interface FormState {
   capacity: string;
   rsvpMode: 'open' | 'host_approves';
   recurrence: EventRecurrence | null;
+  // Real coords from a picked address suggestion (else the pin falls back to the area center).
+  lat?: number;
+  lng?: number;
 }
 
 function freshForm(): FormState {
@@ -83,9 +87,25 @@ export default function PostScreen() {
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(freshForm);
   const [uploadingCover, setUploadingCover] = useState(false);
-  // When editing an existing event: its id + original coords (edit keeps the pin).
   const [editingId, setEditingId] = useState<string | null>(null);
-  const [editCoords, setEditCoords] = useState<{ lat: number; lng: number } | null>(null);
+  const [addrHits, setAddrHits] = useState<AddressHit[]>([]);
+
+  // Address autocomplete (debounced): search unless using my area or already picked.
+  useEffect(() => {
+    if (form.useMyLocation || form.lat != null || form.address.trim().length < 3) {
+      setAddrHits([]);
+      return;
+    }
+    const q = form.address;
+    const t = setTimeout(async () => {
+      try {
+        setAddrHits(await searchAddresses(q));
+      } catch {
+        setAddrHits([]);
+      }
+    }, 350);
+    return () => clearTimeout(t);
+  }, [form.address, form.useMyLocation, form.lat]);
 
   const pickCover = async () => {
     const uri = await pickImage();
@@ -124,9 +144,10 @@ export default function PostScreen() {
           capacity: editEvent.capacity != null ? String(editEvent.capacity) : '',
           rsvpMode: editEvent.rsvpMode === 'host_approves' ? 'host_approves' : 'open',
           recurrence: editEvent.recurrence ?? null,
+          lat: editEvent.lat,
+          lng: editEvent.lng,
         });
         setEditingId(editEvent.id);
-        setEditCoords({ lat: editEvent.lat, lng: editEvent.lng });
         setStep(0);
         useStore.getState().setEditEvent(null);
         return;
@@ -187,11 +208,12 @@ export default function PostScreen() {
 
   const publish = async () => {
     const s = useStore.getState();
-    // Mock geocoding: drop the pin near the current area center.
+    // Coords: a picked/edited address wins; otherwise drop the pin near the area center.
     const jitter = () => (Math.random() - 0.5) * 2;
-    const loc = form.useMyLocation
-      ? offsetMi(s.center, jitter() * 0.5, jitter() * 0.5)
-      : offsetMi(s.center, jitter() * 2, jitter() * 2);
+    const loc =
+      !form.useMyLocation && form.lat != null && form.lng != null
+        ? { lat: form.lat, lng: form.lng }
+        : offsetMi(s.center, jitter() * (form.useMyLocation ? 0.5 : 2), jitter() * (form.useMyLocation ? 0.5 : 2));
     const end = new Date(form.start.getTime() + form.durH * 3600 * 1000);
     const capacity = parseInt(form.capacity, 10);
     const fields = {
@@ -211,14 +233,13 @@ export default function PostScreen() {
     };
     try {
       if (editingId) {
-        // Editing keeps the event's original pin (address relocation is a follow-up).
+        // Keeps the original pin unless a new address was picked (form.lat/lng).
         await updateEvent.mutateAsync({
           id: editingId,
-          patch: { ...fields, lat: editCoords?.lat, lng: editCoords?.lng },
+          patch: { ...fields, lat: loc.lat, lng: loc.lng },
         });
         const id = editingId;
         setEditingId(null);
-        setEditCoords(null);
         setForm(freshForm());
         setStep(0);
         router.push(`/event/${id}`);
@@ -398,23 +419,49 @@ export default function PostScreen() {
               <Text style={[styles.label, { color: p.textSecondary }]}>ADDRESS / MEETING SPOT</Text>
               <TextInput
                 value={form.address}
-                onChangeText={(t) => upd({ address: t })}
-                placeholder="Zilker Park, south lawn by the sign"
+                onChangeText={(t) => upd({ address: t, lat: undefined, lng: undefined })}
+                placeholder="Search a park, beach, or address…"
                 placeholderTextColor={p.textSecondary}
-                style={input()}
+                editable={!form.useMyLocation}
+                style={[input(), form.useMyLocation && { opacity: 0.5 }]}
               />
+              {!form.useMyLocation && form.lat != null ? (
+                <Text style={[styles.hint, { color: p.success }]}>
+                  ✓ Pinned to this location
+                </Text>
+              ) : null}
+              {!form.useMyLocation && addrHits.length > 0 && form.lat == null ? (
+                <View style={[styles.suggestions, { backgroundColor: p.card, borderColor: p.separator }]}>
+                  {addrHits.map((h) => (
+                    <Pressable
+                      key={`${h.lat},${h.lng}`}
+                      onPress={() => {
+                        upd({ address: h.label, lat: h.lat, lng: h.lng });
+                        setAddrHits([]);
+                      }}
+                      style={styles.suggestionRow}>
+                      <Icon sf="mappin.circle.fill" size={16} color={p.accent} />
+                      <Text style={[styles.suggestionText, { color: p.text }]} numberOfLines={2}>
+                        {h.full}
+                      </Text>
+                    </Pressable>
+                  ))}
+                </View>
+              ) : null}
               <View style={styles.switchRow}>
                 <Text style={[styles.switchLabel, { color: p.text }]}>
                   Pin near my current area
                 </Text>
                 <Switch
                   value={form.useMyLocation}
-                  onValueChange={(v) => upd({ useMyLocation: v })}
+                  onValueChange={(v) => upd({ useMyLocation: v, lat: undefined, lng: undefined })}
                   trackColor={{ true: p.accent }}
                 />
               </View>
               <Text style={[styles.hint, { color: p.textSecondary }]}>
-                Demo build: no real geocoding yet — the map pin lands near your area center.
+                {form.useMyLocation
+                  ? 'The map pin lands near your area center.'
+                  : 'Search and pick a spot for an exact pin, or switch to your area.'}
               </Text>
             </View>
           ) : null}
@@ -578,6 +625,19 @@ const styles = StyleSheet.create({
   },
   switchLabel: { fontSize: 15, fontWeight: '600' },
   hint: { fontSize: 12, lineHeight: 16 },
+  suggestions: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radii.md,
+    overflow: 'hidden',
+  },
+  suggestionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+  },
+  suggestionText: { flex: 1, fontSize: 14 },
   reviewCover: { width: '100%', aspectRatio: 16 / 9, borderRadius: Radii.lg },
   reviewTitle: { fontSize: 22, fontWeight: '800', fontFamily: Fonts?.rounded },
   reviewRow: { flexDirection: 'row', alignItems: 'center', gap: 10 },
