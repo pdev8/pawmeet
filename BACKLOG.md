@@ -98,7 +98,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 ## EPIC 10 — Profiles & Badges  🟢
 - [~] Pet profile screen (photo, breed, size, temperament tags) — pets shown on the user profile (#27); dedicated editable pet screen still TODO
 - [ ] Achievement badges: First Meetup, Host, 5 Events, Breed Ambassador
-- [x] Tap attendee badge → mini profile — user profile screen from attendee strips + comment authors, with report/block (#27); host card (real events) still mock
+- [x] Tap attendee badge → mini profile — user profile screen from attendee strips, comment authors, and the event host (#27, #28), with report/block
 
 ## EPIC 11 — Trust, Safety & Moderation  🟢 (launch-critical for a UGC app)
 - [x] Report event / user / comment  🚫 (UGC apps need report or Apple rejects) — event + comment (#20) + user (#27) reporting; admin queue (#21) is the operator half
