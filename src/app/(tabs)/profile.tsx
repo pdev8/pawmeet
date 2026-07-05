@@ -23,6 +23,7 @@ import { BottomTabInset, Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { deleteAccount, signOut } from '@/lib/auth';
 import { BREEDS } from '@/lib/breeds';
+import { useProfile, useUpdateProfile } from '@/lib/use-profile';
 import {
   hostedEvents,
   myFavoriteEvents,
@@ -83,6 +84,8 @@ export default function ProfileScreen() {
   const p = usePalette();
   const router = useRouter();
   const store = useStore();
+  const { data: profile } = useProfile();
+  const updateProfile = useUpdateProfile();
   const me = store.users[store.currentUserId];
   const pets = myPets(store);
   const upcoming = myUpcomingEvents(store);
@@ -144,19 +147,21 @@ export default function ProfileScreen() {
       <ScrollView
         contentContainerStyle={[styles.body, { paddingBottom: BottomTabInset + Spacing.four }]}>
         <View style={styles.meRow}>
-          <Image source={{ uri: me.avatarUrl }} style={styles.meAvatar} />
+          <Image source={{ uri: profile?.avatar_url ?? me.avatarUrl }} style={styles.meAvatar} />
           <View style={{ flex: 1 }}>
             <Pressable
               style={styles.nameRow}
               onPress={() => {
-                setNameDraft(me.displayName);
+                setNameDraft(profile?.display_name ?? me.displayName);
                 setEditingName(true);
               }}>
-              <Text style={[styles.meName, { color: p.text }]}>{me.displayName}</Text>
+              <Text style={[styles.meName, { color: p.text }]}>
+                {profile?.display_name ?? me.displayName}
+              </Text>
               <Icon sf="pencil" size={15} color={p.textSecondary} />
             </Pressable>
             <Text style={[styles.meArea, { color: p.textSecondary }]}>
-              {store.centerLabel}
+              {profile?.home_area ?? store.centerLabel}
             </Text>
           </View>
         </View>
@@ -359,7 +364,7 @@ export default function ProfileScreen() {
                 selected
                 onPress={() => {
                   const t = nameDraft.trim();
-                  if (t) store.updateProfile(t);
+                  if (t) updateProfile.mutate({ display_name: t });
                   setEditingName(false);
                 }}
               />

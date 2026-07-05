@@ -1,4 +1,5 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
+import { QueryClientProvider } from '@tanstack/react-query';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, useColorScheme, View } from 'react-native';
@@ -7,6 +8,7 @@ import { AuthScreen } from '@/components/auth-screen';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
 import { DEFAULT_CENTER, DEFAULT_CENTER_LABEL } from '@/lib/geo';
+import { queryClient } from '@/lib/query';
 import { useStore } from '@/lib/store';
 
 export default function RootLayout() {
@@ -26,18 +28,19 @@ export default function RootLayout() {
   }, [hydrated]);
 
   return (
-    <ThemeProvider
-      value={{
-        ...base,
-        colors: {
-          ...base.colors,
-          primary: palette.accent,
-          background: palette.background,
-          card: palette.background,
-          text: palette.text,
-        },
-      }}>
-      {authLoading ? (
+    <QueryClientProvider client={queryClient}>
+      <ThemeProvider
+        value={{
+          ...base,
+          colors: {
+            ...base.colors,
+            primary: palette.accent,
+            background: palette.background,
+            card: palette.background,
+            text: palette.text,
+          },
+        }}>
+        {authLoading ? (
         <View
           style={{
             flex: 1,
@@ -56,9 +59,10 @@ export default function RootLayout() {
             options={{ headerShown: false, presentation: 'fullScreenModal' }}
           />
         </Stack>
-      ) : (
-        <AuthScreen />
-      )}
-    </ThemeProvider>
+        ) : (
+          <AuthScreen />
+        )}
+      </ThemeProvider>
+    </QueryClientProvider>
   );
 }
