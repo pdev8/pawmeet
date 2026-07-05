@@ -24,6 +24,7 @@ export interface StoredPlaceReview {
   rating: number;
   text: string;
   createdAt: string;
+  photoUrl?: string | null;
 }
 
 export interface User {

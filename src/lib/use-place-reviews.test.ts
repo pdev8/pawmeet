@@ -58,6 +58,7 @@ describe('fetchPlaceReviews', () => {
         rating: 5,
         text: 'Great park',
         createdAt: '2026-02-01T00:00:00Z',
+        photoUrl: null,
       },
     ]);
   });
@@ -101,7 +102,7 @@ describe('fetchMyPlaceReviews', () => {
     expect(chain.eq).toHaveBeenCalledWith('place_id', 'p1');
     expect(chain.eq).toHaveBeenCalledWith('author_id', 'u1');
     expect(out).toEqual([
-      { id: 'r1', placeId: 'p1', authorId: 'u1', rating: 4, text: 'Nice', createdAt: 't0' },
+      { id: 'r1', placeId: 'p1', authorId: 'u1', rating: 4, text: 'Nice', createdAt: 't0', photoUrl: null },
     ]);
   });
 });
@@ -147,8 +148,20 @@ describe('updatePlaceReview', () => {
 
     await updatePlaceReview('r1', 3, '  updated  ');
 
-    expect(update).toHaveBeenCalledWith({ rating: 3, body: 'updated' });
+    expect(update).toHaveBeenCalledWith({ rating: 3, body: 'updated', photo_url: null });
     expect(eq).toHaveBeenCalledWith('id', 'r1');
+  });
+
+  it('persists a photo url when provided', async () => {
+    const eq = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn(() => ({ eq }));
+    from.mockReturnValue({ update });
+
+    await updatePlaceReview('r1', 4, 'nice', 'https://cdn/photos/x.jpg');
+
+    expect(update).toHaveBeenCalledWith(
+      expect.objectContaining({ photo_url: 'https://cdn/photos/x.jpg' }),
+    );
   });
 });
 
