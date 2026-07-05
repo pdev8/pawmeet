@@ -22,8 +22,17 @@ rm -rf dist-check
 
 ## Reading the result
 - **Typecheck passes** = `tsc` exits 0 with no output. Any `error TS…` line must be fixed first.
-- **Tests pass** = Vitest reports all files/tests passed. Tests live in `src/lib/*.test.ts` and cover pure logic only (geometry, review math, places, store rules) — RN components aren't unit-tested. Add/extend a test when you touch that logic.
+- **Tests pass** = Vitest reports all files/tests passed. Tests live in `src/lib/*.test.ts`.
 - **Export passes** = it ends with `Exported: dist-check` and lists a written `.hbc` bundle. A red stack trace = a bundle/runtime import problem to fix.
+
+## Write tests for each story (standing expectation)
+When a change adds unit-testable logic, **add or extend Vitest tests for it as
+part of that change** — don't ship new logic untested. Testable = pure functions,
+store actions/reducers, selectors, date/geo math, and data-layer glue where the
+Supabase client can be mocked (`vi.mock('./supabase', …)` — see `auth.test.ts` /
+`use-profile.test.ts`). Skip only for pure UI / styling / config with no logic
+(RN components aren't unit-tested here). If a story genuinely has no testable
+surface, say so rather than silently skipping.
 
 ## Notes
 - This does **not** run the app. Only the user's iPhone (Expo Go) can exercise the
