@@ -48,9 +48,11 @@ import {
   RECURRENCE_LABELS,
   VENUE_ICONS,
   VENUE_LABELS,
+  type Pet,
   type PetEvent,
   type User,
 } from '@/lib/types';
+import { useUserProfile } from '@/lib/use-user-profile';
 
 function AttendeeStrip({
   title,
@@ -134,6 +136,39 @@ function SupabaseAttendeeStrip({
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+// Host card for real (Supabase) events — fetches the host's profile so it works
+// off the mock store, and taps through to their profile.
+function SupabaseHostCard({ event }: { event: PetEvent }) {
+  const p = usePalette();
+  const router = useRouter();
+  const { data: profile } = useUserProfile(event.hostId);
+  if (!profile) return null;
+  const user: User = {
+    id: profile.id,
+    displayName: profile.displayName,
+    avatarUrl: profile.avatarUrl,
+    homeArea: profile.homeArea,
+  };
+  const fp = profile.pets[0];
+  const pet: Pet | undefined = fp
+    ? { id: fp.id, ownerId: profile.id, name: fp.name, breed: fp.breed, photoUrl: fp.photoUrl, size: fp.size }
+    : undefined;
+  return (
+    <Pressable
+      onPress={() => router.push(`/user/${profile.id}`)}
+      style={[styles.hostCard, { backgroundColor: p.card, borderColor: p.separator }]}>
+      <OwnerPetBadge user={user} pet={pet} size={44} />
+      <View style={{ flex: 1 }}>
+        <Text style={[styles.hostName, { color: p.text }]}>Hosted by {profile.displayName}</Text>
+        {profile.homeArea ? (
+          <Text style={[styles.hostMeta, { color: p.textSecondary }]}>{profile.homeArea}</Text>
+        ) : null}
+      </View>
+      <Icon sf="chevron.right" size={13} color={p.textSecondary} />
+    </Pressable>
   );
 }
 
@@ -539,7 +574,9 @@ export default function EventScreen() {
               </View>
             ) : null}
 
-            {host ? (
+            {sbEvent ? (
+              <SupabaseHostCard event={event} />
+            ) : host ? (
               <Pressable
                 onPress={() => setProfileUser(host)}
                 style={[styles.hostCard, { backgroundColor: p.card, borderColor: p.separator }]}>
