@@ -108,15 +108,36 @@ export function ringAreaM2(pts: MapPoint[]): number {
   return Math.abs(area / 2);
 }
 
+// Short-lived in-memory cache so re-opening the map (or panning back to a spot)
+// doesn't trigger a fresh Overpass round-trip. Keyed by center rounded to ~110m.
+interface PlaceCacheEntry {
+  at: number;
+  places: DogPlace[];
+}
+const PLACE_CACHE = new Map<string, PlaceCacheEntry>();
+const PLACE_CACHE_TTL_MS = 5 * 60 * 1000;
+const placeCacheKey = (center: LatLng, radiusM: number) =>
+  `${center.lat.toFixed(3)},${center.lng.toFixed(3)},${radiusM}`;
+
+/** Test-only: reset the Overpass cache. */
+export function _clearPlaceCache(): void {
+  PLACE_CACHE.clear();
+}
+
 /**
  * Fetch dog-friendly places around a point from OpenStreetMap (Overpass).
  * Includes dog parks, parks, nature reserves, beaches, and named trails,
- * excluding anything explicitly tagged dog=no.
+ * excluding anything explicitly tagged dog=no. Results are cached for a few
+ * minutes per rounded center so revisits are instant.
  */
 export async function fetchDogFriendlyPlaces(
   center: LatLng,
   radiusM = 3500,
 ): Promise<DogPlace[]> {
+  const key = placeCacheKey(center, radiusM);
+  const cached = PLACE_CACHE.get(key);
+  if (cached && Date.now() - cached.at < PLACE_CACHE_TTL_MS) return cached.places;
+
   const around = `(around:${radiusM},${center.lat.toFixed(6)},${center.lng.toFixed(6)})`;
   const query = `[out:json][timeout:25];
 (
@@ -174,7 +195,9 @@ out geom 200;`;
       return a.category === 'dog_park' ? -1 : 1;
     return b.areaM2 - a.areaM2;
   });
-  return places.slice(0, 60);
+  const result = places.slice(0, 60);
+  PLACE_CACHE.set(key, { at: Date.now(), places: result });
+  return result;
 }
 
 // ---- Demo reviews -----------------------------------------------------------

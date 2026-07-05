@@ -578,6 +578,9 @@ export default function MapScreen() {
             {error ? (
               <Glass style={styles.statusChip}>
                 <Text style={[styles.statusText, { color: p.danger }]}>{error}</Text>
+                <Pressable onPress={searchThisArea}>
+                  <Text style={[styles.searchArea, { color: p.accent }]}>Retry</Text>
+                </Pressable>
               </Glass>
             ) : null}
             <Glass style={styles.statusChip}>
@@ -586,6 +589,17 @@ export default function MapScreen() {
                   <PawkLogo size={26} />
                   <ActivityIndicator size="small" color={p.accent} />
                   <Text style={[styles.statusText, { color: p.text }]}>Sniffing out spots…</Text>
+                </>
+              ) : visible.length === 0 && !error ? (
+                <>
+                  <Text style={[styles.statusText, { color: p.textSecondary }]}>
+                    {places.length === 0
+                      ? 'No dog-friendly spots here'
+                      : 'None match your filters'}
+                  </Text>
+                  <Pressable onPress={searchThisArea}>
+                    <Text style={[styles.searchArea, { color: p.accent }]}>Search this area</Text>
+                  </Pressable>
                 </>
               ) : (
                 <>

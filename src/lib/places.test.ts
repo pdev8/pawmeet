@@ -1,8 +1,10 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
+  _clearPlaceCache,
   categorize,
   demoReviews,
+  fetchDogFriendlyPlaces,
   placeRating,
   ringAreaM2,
   searchAddresses,
@@ -137,5 +139,32 @@ describe('searchAddresses', () => {
   it('returns [] on a failed response', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
     expect(await searchAddresses('somewhere')).toEqual([]);
+  });
+});
+
+describe('fetchDogFriendlyPlaces caching', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    _clearPlaceCache();
+  });
+
+  const emptyOverpass = () =>
+    vi.fn().mockResolvedValue({ ok: true, json: async () => ({ elements: [] }) });
+
+  it('serves a repeat call for the same center from cache (one network hit)', async () => {
+    const fetchMock = emptyOverpass();
+    vi.stubGlobal('fetch', fetchMock);
+    const c = { lat: 33.7455, lng: -117.8677 };
+    await fetchDogFriendlyPlaces(c);
+    await fetchDogFriendlyPlaces(c);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it('refetches for a different center', async () => {
+    const fetchMock = emptyOverpass();
+    vi.stubGlobal('fetch', fetchMock);
+    await fetchDogFriendlyPlaces({ lat: 33.74, lng: -117.86 });
+    await fetchDogFriendlyPlaces({ lat: 34.05, lng: -118.24 });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 });
