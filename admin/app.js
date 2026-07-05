@@ -17,6 +17,8 @@ if (!cfg || cfg.supabaseUrl.includes('YOUR-')) {
 
 const supabase = createClient(cfg.supabaseUrl, cfg.supabaseAnonKey);
 
+let currentUserId = null;
+
 // ---- helpers ----
 const fmtDate = (iso) =>
   iso ? new Date(iso).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '—';
@@ -32,7 +34,83 @@ async function count(table, build) {
 }
 
 // ---- panels ----
-const PANELS = { operations, events, users };
+const PANELS = { operations, moderation, events, users };
+
+let reportFilter = 'open';
+async function moderation() {
+  const filters = ['open', 'resolved', 'dismissed', 'all'];
+  const chips = filters
+    .map((s) => `<button class="chip ${s === reportFilter ? 'active' : ''}" data-rfilter="${s}">${s}</button>`)
+    .join('');
+  panelEl.innerHTML = `<h1>Moderation</h1><p class="panel-sub">User reports · newest first · up to 200.</p>
+    <div class="toolbar">${chips}</div>
+    <div id="reports-table"><div class="empty">Loading…</div></div>`;
+
+  panelEl.querySelectorAll('[data-rfilter]').forEach((b) =>
+    b.addEventListener('click', () => {
+      reportFilter = b.dataset.rfilter;
+      moderation();
+    }),
+  );
+
+  try {
+    let q = supabase
+      .from('reports')
+      .select(
+        'id, target_type, target_id, reason, status, created_at, reporter:profiles!reports_reporter_id_fkey(display_name)',
+      )
+      .order('created_at', { ascending: false })
+      .limit(200);
+    if (reportFilter !== 'all') q = q.eq('status', reportFilter);
+    const { data, error } = await q;
+    if (error) throw error;
+    if (!data.length) {
+      $('#reports-table').innerHTML = `<div class="empty">No ${reportFilter === 'all' ? '' : reportFilter + ' '}reports.</div>`;
+      return;
+    }
+    const rows = data
+      .map((r) => {
+        const actions =
+          r.status === 'open'
+            ? `<button class="mini" data-resolve="${r.id}">Resolve</button>
+               <button class="mini ghost" data-dismiss="${r.id}">Dismiss</button>`
+            : `<span class="muted">${esc(r.status)}</span>`;
+        return `<tr>
+          <td><span class="pill warn">${esc(r.target_type)}</span></td>
+          <td class="wrap">${esc(r.reason) || '<span class="muted">— no reason —</span>'}</td>
+          <td>${esc(r.reporter?.display_name) || '—'}</td>
+          <td>${fmtDate(r.created_at)}</td>
+          <td class="mono muted">${esc(r.target_id).slice(0, 8)}…</td>
+          <td>${actions}</td>
+        </tr>`;
+      })
+      .join('');
+    $('#reports-table').innerHTML = `<div class="table-wrap"><table>
+      <thead><tr><th>Type</th><th>Reason</th><th>Reporter</th><th>When</th><th>Target</th><th></th></tr></thead>
+      <tbody>${rows}</tbody></table></div><span class="count">${data.length} shown</span>`;
+
+    panelEl.querySelectorAll('[data-resolve]').forEach((b) =>
+      b.addEventListener('click', () => resolveReport(b.dataset.resolve, 'resolved')),
+    );
+    panelEl.querySelectorAll('[data-dismiss]').forEach((b) =>
+      b.addEventListener('click', () => resolveReport(b.dataset.dismiss, 'dismissed')),
+    );
+  } catch (e) {
+    $('#reports-table').innerHTML = `<p class="error">${esc(e.message)}</p>`;
+  }
+}
+
+async function resolveReport(id, status) {
+  const { error } = await supabase
+    .from('reports')
+    .update({ status, resolved_at: new Date().toISOString(), resolved_by: currentUserId })
+    .eq('id', id);
+  if (error) {
+    alert(error.message);
+    return;
+  }
+  moderation();
+}
 
 async function operations() {
   panelEl.innerHTML = `<h1>Operations</h1><p class="panel-sub">Scheduled jobs and data health.</p>
@@ -190,12 +268,25 @@ $('#login-form').addEventListener('submit', async (e) => {
 
 $('#signout').addEventListener('click', () => supabase.auth.signOut());
 
+async function refreshAdminGate() {
+  let isAdmin = false;
+  try {
+    const { data } = await supabase.from('admins').select('user_id').eq('user_id', currentUserId);
+    isAdmin = !!(data && data.length);
+  } catch {
+    isAdmin = false;
+  }
+  document.querySelectorAll('[data-admin-only]').forEach((el) => (el.hidden = !isAdmin));
+}
+
 function render(session) {
   const signedIn = !!session;
   loginView.hidden = signedIn;
   consoleView.hidden = !signedIn;
+  currentUserId = signedIn ? session.user.id : null;
   if (signedIn) {
     $('#who').textContent = session.user.email;
+    refreshAdminGate();
     showPanel('operations');
   }
 }

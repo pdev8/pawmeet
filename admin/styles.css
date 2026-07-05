@@ -137,6 +137,9 @@ td.wrap { white-space: normal; max-width: 320px; }
 .empty { padding: 40px; text-align: center; color: var(--text-2); }
 .count { color: var(--text-2); font-size: 13px; font-weight: 600; margin-left: 8px; }
 
+.mini { font-size: 12px; font-weight: 700; padding: 5px 10px; border-radius: 7px; margin-right: 6px; }
+.mini.ghost { background: var(--surface-2); color: var(--text-2); }
+
 @media (max-width: 720px) {
   .console { grid-template-columns: 1fr; }
   .sidebar { flex-direction: row; align-items: center; flex-wrap: wrap; }
