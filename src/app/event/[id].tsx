@@ -569,6 +569,14 @@ export default function EventScreen() {
             )}
 
             {sbEvent ? <SupabaseReportEvent event={event} /> : null}
+
+            <Pressable
+              onPress={() => router.push('/guidelines')}
+              style={{ alignSelf: 'center', paddingBottom: Spacing.two }}>
+              <Text style={{ color: p.textSecondary, fontSize: 12, fontWeight: '600' }}>
+                Be kind — follow our Community Guidelines
+              </Text>
+            </Pressable>
           </View>
         </ScrollView>
 
