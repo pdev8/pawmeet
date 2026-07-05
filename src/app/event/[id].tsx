@@ -15,7 +15,7 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { OwnerPetBadge } from '@/components/avatar';
 import { Chip } from '@/components/chip';
-import { CommentsSection } from '@/components/comments';
+import { CommentsSection, SupabaseCommentsSection } from '@/components/comments';
 import { Glass } from '@/components/glass';
 import { Icon } from '@/components/icon';
 import { Fonts, Radii, Spacing } from '@/constants/theme';
@@ -475,7 +475,11 @@ export default function EventScreen() {
             <AttendeeStrip title="Going" userIds={going} onTapUser={setProfileUser} />
             <AttendeeStrip title="Interested" userIds={interested} onTapUser={setProfileUser} />
 
-            <CommentsSection event={event} />
+            {sbEvent ? (
+              <SupabaseCommentsSection event={event} />
+            ) : (
+              <CommentsSection event={event} />
+            )}
           </View>
         </ScrollView>
 
