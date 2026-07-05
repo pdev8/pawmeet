@@ -37,7 +37,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [x] Email auth (Supabase email/password + login gate, PR #7) — works in Expo Go
 - [ ] Sign in with Apple  🚫 — needs a custom dev build (deferred while pinned to Expo Go)
 - [x] In-app account deletion flow — `delete_current_user` RPC + ON DELETE CASCADE (verified end-to-end); meets the Apple requirement
-- [ ] Swap zustand mock store → real data layer (TanStack Query) — migrated: client (#6), Profile (#9), Pets (#10), Place reviews (#11), Events (#12), RSVP core (#13, verified e2e); comments next + attendee badges/counts + host approve/decline
+- [ ] Swap zustand mock store → real data layer (TanStack Query) — migrated: client (#6), Profile (#9), Pets (#10), Place reviews (#11), Events (#12), RSVP core (#13, verified e2e), Comments (#14, threaded + host moderation, verified e2e); next: attendee badges/counts + host approve/decline
 - [ ] Replace mock timers (host approval ~6s, canned replies ~7s) with real writes
 - [~] PostGIS radius search — `nearby_events(lat,lng,radius)` RPC created; app still uses haversine until the client layer lands
 - [~] Scheduled archival job — `archive_past_events()` created; enable pg_cron in the dashboard to schedule it hourly
@@ -79,8 +79,8 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 
 ## EPIC 7 — Comments  🟢
 - [ ] Realtime new comments while the event screen is open
-- [ ] "Host" / "Going" author context chips
-- [ ] Rate limit + 1000-char cap enforcement
+- [x] "Host" / "Going" author context chips — live on Supabase-backed comments (#14)
+- [x] 1000-char cap enforcement — DB CHECK + client maxLength (#14); rate limit still TODO
 - [ ] Report a comment
 
 ## EPIC 8 — Notifications & Push  🔴 (needs backend)
