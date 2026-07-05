@@ -91,7 +91,7 @@ function AttendeeStrip({
 }
 
 // Attendee strip for real (Supabase) events. Builds badges from the RSVP rows'
-// embedded profiles; the pet peek + tap-to-profile are mock-only for now.
+// embedded profiles; tapping a badge opens that user's profile.
 function SupabaseAttendeeStrip({
   title,
   rsvps,
@@ -102,6 +102,7 @@ function SupabaseAttendeeStrip({
   status: 'going' | 'interested';
 }) {
   const p = usePalette();
+  const router = useRouter();
   const rows = rsvps.filter((r) => r.status === status);
   if (rows.length === 0) return null;
   return (
@@ -119,12 +120,15 @@ function SupabaseAttendeeStrip({
               homeArea: '',
             };
             return (
-              <View key={r.id} style={styles.stripItem}>
+              <Pressable
+                key={r.id}
+                style={styles.stripItem}
+                onPress={() => router.push(`/user/${r.userId}`)}>
                 <OwnerPetBadge user={user} size={48} />
                 <Text style={[styles.stripName, { color: p.textSecondary }]} numberOfLines={1}>
                   {user.displayName.split(' ')[0]}
                 </Text>
-              </View>
+              </Pressable>
             );
           })}
         </View>
