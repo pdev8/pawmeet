@@ -34,6 +34,12 @@ import {
   type DogPlace,
   type PlaceCategory,
 } from '@/lib/places';
+import {
+  useAddPlaceReview,
+  useDeletePlaceReview,
+  useMyPlaceReviews,
+  useUpdatePlaceReview,
+} from '@/lib/use-place-reviews';
 import { blendedRating, mergeReviews, stars } from '@/lib/reviews';
 import { useStore } from '@/lib/store';
 
@@ -180,7 +186,10 @@ export default function MapScreen() {
   // The headline rating blends both so a place reacts to what I leave.
   // My reviews (newest first, flagged for edit/delete) above the demo community
   // reviews; the headline rating blends both. See src/lib/reviews.ts.
-  const myReviews = selected ? store.placeReviews[selected.id] ?? [] : [];
+  const { data: myReviews = [] } = useMyPlaceReviews(selected?.id);
+  const addReview = useAddPlaceReview();
+  const updateReview = useUpdatePlaceReview();
+  const deleteReviewMut = useDeletePlaceReview();
   const demoList = selected ? demoReviews(selected, reviewers) : [];
   const reviews = selected ? mergeReviews(myReviews, demoList, store.users) : [];
   const rating = selected ? blendedRating(placeRating(selected), demoList.length, myReviews) : 0;
@@ -196,9 +205,9 @@ export default function MapScreen() {
   const submitReview = () => {
     if (!selected || !canReview) return;
     if (editingId) {
-      store.updatePlaceReview(selected.id, editingId, myRating, myText);
+      updateReview.mutate({ id: editingId, rating: myRating, text: myText });
     } else {
-      store.addPlaceReview(selected.id, myRating, myText);
+      addReview.mutate({ placeId: selected.id, rating: myRating, text: myText });
     }
     resetComposer();
     Keyboard.dismiss();
@@ -213,15 +222,13 @@ export default function MapScreen() {
   };
 
   const deleteReview = (reviewId: string) => {
-    if (!selected) return;
-    const { id: placeId } = selected;
     Alert.alert('Delete your review?', 'This removes your review for this place.', [
       { text: 'Cancel', style: 'cancel' },
       {
         text: 'Delete',
         style: 'destructive',
         onPress: () => {
-          store.deletePlaceReview(placeId, reviewId);
+          deleteReviewMut.mutate(reviewId);
           if (editingId === reviewId) resetComposer();
         },
       },
