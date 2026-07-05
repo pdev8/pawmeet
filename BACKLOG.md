@@ -104,7 +104,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [~] Report event / user / comment  🚫 (UGC apps need report or Apple rejects) — event + comment reporting shipped (#20, insert-own RLS); user reporting needs a profile view; admin queue is the operator half
 - [ ] Block user (mutual hide of events, RSVPs, comments)  🚫
 - [x] Simple admin moderation-queue web view + a process/owner for reviewing reports — `admins` allowlist + `is_admin` RLS + Moderation panel (resolve/dismiss) in `admin/` (#21); grant admins via SQL insert
-- [ ] Age gate (17+) + community guidelines text on events  🚫
+- [x] Age gate (17+) + community guidelines text on events  🚫 — one-time 17+ gate + guidelines screen (Profile + every event) (#23)
 
 ## EPIC 12 — Design System & Accessibility  🟢
 - [ ] Respect Reduce Transparency (glass → solid) & Reduce Motion
