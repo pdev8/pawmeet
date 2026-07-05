@@ -98,9 +98,16 @@ describe('fetchDiscoverEvents', () => {
   it('calls the nearby_events RPC with the radius in meters and ranks the rows', async () => {
     const future = new Date(Date.now() + 3 * 86400000).toISOString();
     rpc.mockResolvedValue({ data: [{ ...dbRow, starts_at: future, ends_at: future }], error: null });
-    // fetchGoingCounts → from('rsvps').select().in().eq()
-    from.mockReturnValue({
-      select: () => ({ in: () => ({ eq: vi.fn().mockResolvedValue({ data: [], error: null }) }) }),
+    auth.getUser.mockResolvedValue({ data: { user: { id: 'me' } } });
+    from.mockImplementation((table: string) => {
+      // fetchBlockedIds → from('blocks').select() resolves to a rows array
+      if (table === 'blocks') {
+        return { select: vi.fn().mockResolvedValue({ data: [], error: null }) };
+      }
+      // fetchGoingCounts → from('rsvps').select().in().eq()
+      return {
+        select: () => ({ in: () => ({ eq: vi.fn().mockResolvedValue({ data: [], error: null }) }) }),
+      };
     });
 
     const center = { lat: 30, lng: -97 };

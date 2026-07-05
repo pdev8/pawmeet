@@ -33,6 +33,7 @@ import {
   spotsLeft,
   visibleAddress,
 } from '@/lib/selectors';
+import { useBlockedIds } from '@/lib/use-blocks';
 import { useEvent } from '@/lib/use-events';
 import { useReportContent } from '@/lib/use-reports';
 import {
@@ -418,6 +419,7 @@ export default function EventScreen() {
   // events still shown on Profile during the data-layer migration.
   const { data: sbEvent } = useEvent(id);
   const { data: sbRsvps = [] } = useEventRsvps(id);
+  const { data: blockedIds = [] } = useBlockedIds();
   const event = sbEvent ?? (id ? store.events[id] : undefined);
   if (!event) {
     return (
@@ -429,6 +431,8 @@ export default function EventScreen() {
 
   const host = store.users[event.hostId];
   const hostPet = Object.values(store.pets).find((x) => x.ownerId === event.hostId);
+  const blockedSet = new Set(blockedIds);
+  const visibleRsvps = sbRsvps.filter((r) => !blockedSet.has(r.userId));
   const going = goingRsvps(store, event.id).map((r) => r.userId);
   const interested = interestedRsvps(store, event.id).map((r) => r.userId);
   const address = visibleAddress(store, event);
@@ -552,8 +556,8 @@ export default function EventScreen() {
 
             {sbEvent ? (
               <>
-                <SupabaseAttendeeStrip title="Going" rsvps={sbRsvps} status="going" />
-                <SupabaseAttendeeStrip title="Interested" rsvps={sbRsvps} status="interested" />
+                <SupabaseAttendeeStrip title="Going" rsvps={visibleRsvps} status="going" />
+                <SupabaseAttendeeStrip title="Interested" rsvps={visibleRsvps} status="interested" />
               </>
             ) : (
               <>
