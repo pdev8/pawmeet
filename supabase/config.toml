@@ -1,0 +1,7 @@
+# Supabase project config (used by the Supabase CLI and the GitHub integration).
+# Migrations in supabase/migrations/ are applied in filename order.
+# Run `supabase init` locally if you want the full set of local-dev sections.
+project_id = "pawmeet"
+
+[db]
+major_version = 15
