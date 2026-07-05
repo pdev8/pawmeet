@@ -237,6 +237,7 @@ function SupabaseRsvpBar({ event }: { event: PetEvent }) {
         <View style={styles.hostBarText}>
           <Text style={[styles.rsvpState, { color: p.text }]}>You&apos;re hosting</Text>
         </View>
+        <Chip label="Manage" onPress={() => router.push(`/manage/${event.id}`)} />
         <Chip
           label="Edit"
           onPress={() => {

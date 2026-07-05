@@ -5,7 +5,7 @@ vi.mock('./supabase', () => ({
 }));
 
 import { supabase } from './supabase';
-import { addPet, fetchMyPets, updatePet } from './use-pets';
+import { addPet, fetchMyPets, fetchPetsForOwners, updatePet } from './use-pets';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const auth = supabase.auth as any;
@@ -92,5 +92,26 @@ describe('updatePet', () => {
     const eq = vi.fn().mockResolvedValue({ error: new Error('bad') });
     from.mockReturnValue({ update: () => ({ eq }) });
     await expect(updatePet('p1', { name: 'x' })).rejects.toThrow('bad');
+  });
+});
+
+describe('fetchPetsForOwners', () => {
+  it('returns [] without querying for an empty owner list', async () => {
+    expect(await fetchPetsForOwners([])).toEqual([]);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it('maps pets for the given owners', async () => {
+    const inFn = vi.fn().mockResolvedValue({
+      data: [{ id: 'p1', owner_id: 'u1', name: 'Biscuit', breed: 'Corgi', photo_url: 'x.png', size: 'S' }],
+      error: null,
+    });
+    from.mockReturnValue({ select: vi.fn(() => ({ in: inFn })) });
+    const out = await fetchPetsForOwners(['u1', 'u2']);
+    expect(from).toHaveBeenCalledWith('pets');
+    expect(inFn).toHaveBeenCalledWith('owner_id', ['u1', 'u2']);
+    expect(out).toEqual([
+      { id: 'p1', ownerId: 'u1', name: 'Biscuit', breed: 'Corgi', photoUrl: 'x.png', size: 'S' },
+    ]);
   });
 });
