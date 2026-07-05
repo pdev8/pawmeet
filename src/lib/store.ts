@@ -54,6 +54,7 @@ interface AppState {
 
   setHasHydrated: (v: boolean) => void;
   confirmAge: () => void;
+  resetAgeGate: () => void;
   reseed: (center: LatLng, label: string, keepProfile?: boolean) => void;
   adoptGpsCenter: (center: LatLng) => void;
   archiveSweep: () => void;
@@ -120,6 +121,7 @@ export const useStore = create<AppState>()(
 
       setHasHydrated: (v) => set({ hasHydrated: v }),
       confirmAge: () => set({ ageConfirmed: true }),
+      resetAgeGate: () => set({ ageConfirmed: false }),
 
       reseed: (center, label, keepProfile = true) => {
         const s = get();

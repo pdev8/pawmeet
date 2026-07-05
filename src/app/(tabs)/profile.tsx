@@ -305,6 +305,16 @@ export default function ProfileScreen() {
           <Text style={[styles.reset, { color: p.danger }]}>Reset demo data</Text>
         </Pressable>
 
+        {__DEV__ ? (
+          <Pressable
+            onPress={() => {
+              store.resetAgeGate();
+              Alert.alert('Age gate reset', 'Reload the app to see it again.');
+            }}>
+            <Text style={[styles.reset, { color: p.textSecondary }]}>Reset age gate (dev)</Text>
+          </Pressable>
+        ) : null}
+
         <Pressable onPress={() => router.push('/guidelines')}>
           <Text style={[styles.reset, { color: p.textSecondary }]}>Community Guidelines</Text>
         </Pressable>

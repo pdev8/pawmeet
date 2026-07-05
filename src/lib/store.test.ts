@@ -146,12 +146,18 @@ describe('archiveSweep with recurring events', () => {
   });
 });
 
-describe('confirmAge', () => {
+describe('confirmAge / resetAgeGate', () => {
   it('flips the one-time age-confirmation flag', () => {
     useStore.setState({ ageConfirmed: false });
     expect(state().ageConfirmed).toBe(false);
     state().confirmAge();
     expect(state().ageConfirmed).toBe(true);
+  });
+
+  it('resetAgeGate clears the flag (dev re-test helper)', () => {
+    state().confirmAge();
+    state().resetAgeGate();
+    expect(state().ageConfirmed).toBe(false);
   });
 });
 
