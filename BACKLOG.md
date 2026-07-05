@@ -36,7 +36,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [x] Stand up schema: profiles, pets, events, rsvps, comments, reports + place_reviews / favorites / saved_searches / notifications, with RLS (merged PR #5)
 - [x] Email auth (Supabase email/password + login gate, PR #7) — works in Expo Go
 - [ ] Sign in with Apple  🚫 — needs a custom dev build (deferred while pinned to Expo Go)
-- [ ] In-app account deletion flow  🚫 (Apple requires it for any app with sign-up)
+- [x] In-app account deletion flow — `delete_current_user` RPC + ON DELETE CASCADE (verified end-to-end); meets the Apple requirement
 - [ ] Swap zustand mock store → real data layer (TanStack Query for server cache) — Supabase client on main (PR #6); features migrating next
 - [ ] Replace mock timers (host approval ~6s, canned replies ~7s) with real writes
 - [~] PostGIS radius search — `nearby_events(lat,lng,radius)` RPC created; app still uses haversine until the client layer lands
