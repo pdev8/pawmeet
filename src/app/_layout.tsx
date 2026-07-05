@@ -4,6 +4,7 @@ import { Stack } from 'expo-router';
 import { useEffect } from 'react';
 import { ActivityIndicator, useColorScheme, View } from 'react-native';
 
+import { AgeGate } from '@/components/age-gate';
 import { AuthScreen } from '@/components/auth-screen';
 import { Colors } from '@/constants/theme';
 import { useAuth } from '@/lib/auth';
@@ -16,6 +17,7 @@ export default function RootLayout() {
   const palette = scheme === 'dark' ? Colors.dark : Colors.light;
   const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
   const hydrated = useStore((s) => s.hasHydrated);
+  const ageConfirmed = useStore((s) => s.ageConfirmed);
   const { session, loading: authLoading } = useAuth();
 
   useEffect(() => {
@@ -40,25 +42,31 @@ export default function RootLayout() {
             text: palette.text,
           },
         }}>
-        {authLoading ? (
-        <View
-          style={{
-            flex: 1,
-            alignItems: 'center',
-            justifyContent: 'center',
-            backgroundColor: palette.background,
-          }}>
-          <ActivityIndicator color={palette.accent} />
-        </View>
-      ) : session ? (
-        <Stack>
-          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-          <Stack.Screen name="event/[id]" options={{ headerShown: false }} />
-          <Stack.Screen
-            name="map"
-            options={{ headerShown: false, presentation: 'fullScreenModal' }}
-          />
-        </Stack>
+        {authLoading || !hydrated ? (
+          <View
+            style={{
+              flex: 1,
+              alignItems: 'center',
+              justifyContent: 'center',
+              backgroundColor: palette.background,
+            }}>
+            <ActivityIndicator color={palette.accent} />
+          </View>
+        ) : !ageConfirmed ? (
+          <AgeGate />
+        ) : session ? (
+          <Stack>
+            <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+            <Stack.Screen name="event/[id]" options={{ headerShown: false }} />
+            <Stack.Screen
+              name="map"
+              options={{ headerShown: false, presentation: 'fullScreenModal' }}
+            />
+            <Stack.Screen
+              name="guidelines"
+              options={{ title: 'Community Guidelines', presentation: 'modal' }}
+            />
+          </Stack>
         ) : (
           <AuthScreen />
         )}

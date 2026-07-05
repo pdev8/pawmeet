@@ -305,6 +305,10 @@ export default function ProfileScreen() {
           <Text style={[styles.reset, { color: p.danger }]}>Reset demo data</Text>
         </Pressable>
 
+        <Pressable onPress={() => router.push('/guidelines')}>
+          <Text style={[styles.reset, { color: p.textSecondary }]}>Community Guidelines</Text>
+        </Pressable>
+
         <Pressable
           onPress={() =>
             Alert.alert('Sign out?', 'You can sign back in anytime.', [

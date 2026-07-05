@@ -146,6 +146,15 @@ describe('archiveSweep with recurring events', () => {
   });
 });
 
+describe('confirmAge', () => {
+  it('flips the one-time age-confirmation flag', () => {
+    useStore.setState({ ageConfirmed: false });
+    expect(state().ageConfirmed).toBe(false);
+    state().confirmAge();
+    expect(state().ageConfirmed).toBe(true);
+  });
+});
+
 // Regression guards: the mock "backend liveness" setTimeout fakes were retired
 // once host approve/decline and comments went real on Supabase. These lock in
 // that the mock store no longer auto-responds, even after time passes.

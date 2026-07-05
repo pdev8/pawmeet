@@ -50,8 +50,10 @@ interface AppState {
   placeReviews: Record<string, StoredPlaceReview[]>;
   favorites: string[];
   draft: Partial<EventDraft> | null;
+  ageConfirmed: boolean;
 
   setHasHydrated: (v: boolean) => void;
+  confirmAge: () => void;
   reseed: (center: LatLng, label: string, keepProfile?: boolean) => void;
   adoptGpsCenter: (center: LatLng) => void;
   archiveSweep: () => void;
@@ -114,8 +116,10 @@ export const useStore = create<AppState>()(
       placeReviews: {},
       favorites: [],
       draft: null,
+      ageConfirmed: false,
 
       setHasHydrated: (v) => set({ hasHydrated: v }),
+      confirmAge: () => set({ ageConfirmed: true }),
 
       reseed: (center, label, keepProfile = true) => {
         const s = get();
@@ -497,6 +501,7 @@ export const useStore = create<AppState>()(
         notifications: s.notifications,
         placeReviews: s.placeReviews,
         favorites: s.favorites,
+        ageConfirmed: s.ageConfirmed,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
