@@ -1,6 +1,6 @@
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   Alert,
   Animated,
@@ -30,10 +30,10 @@ import { usePalette } from '@/hooks/use-palette';
 import {
   activeFilterCount,
   DEFAULT_FILTERS,
-  discoverEvents,
   type Filters,
   type SortMode,
 } from '@/lib/filters';
+import { useDiscoverEvents } from '@/lib/use-events';
 import { geocodeLocation } from '@/lib/places';
 import { useStore } from '@/lib/store';
 
@@ -88,6 +88,7 @@ export default function DiscoverScreen() {
     if (phase !== 'idle') return;
     setPhase('shake');
     useStore.getState().archiveSweep();
+    refetch();
     Animated.timing(gap, {
       toValue: 96,
       duration: 250,
@@ -129,10 +130,7 @@ export default function DiscoverScreen() {
     })();
   }, [store.hasHydrated, store.seededWithGps]);
 
-  const items = useMemo(
-    () => discoverEvents(store, store.center, filters),
-    [store, filters],
-  );
+  const { data: items = [], refetch } = useDiscoverEvents(store.center, filters);
   const nFilters = activeFilterCount(filters);
 
   // Geocode a free-text place (Nominatim, via places.ts) and re-center the demo
