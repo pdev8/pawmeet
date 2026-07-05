@@ -105,6 +105,21 @@ export default function ProfileScreen() {
   const [nameDraft, setNameDraft] = useState('');
   const [petForm, setPetForm] = useState<PetForm | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
+  const [uploadingAvatar, setUploadingAvatar] = useState(false);
+
+  const pickAvatar = async () => {
+    const uri = await pickImage();
+    if (!uri) return;
+    setUploadingAvatar(true);
+    try {
+      const url = await uploadPublicImage('avatars', uri);
+      updateProfile.mutate({ avatar_url: url });
+    } catch (e) {
+      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setUploadingAvatar(false);
+    }
+  };
 
   const pickPetPhoto = async () => {
     const uri = await pickImage();
@@ -169,7 +184,16 @@ export default function ProfileScreen() {
       <ScrollView
         contentContainerStyle={[styles.body, { paddingBottom: BottomTabInset + Spacing.four }]}>
         <View style={styles.meRow}>
-          <Image source={{ uri: profile?.avatar_url ?? me.avatarUrl }} style={styles.meAvatar} />
+          <Pressable onPress={pickAvatar} disabled={uploadingAvatar} accessibilityLabel="Change profile photo">
+            <Image source={{ uri: profile?.avatar_url ?? me.avatarUrl }} style={styles.meAvatar} />
+            <View style={[styles.avatarBadge, { backgroundColor: p.accent, borderColor: p.background }]}>
+              {uploadingAvatar ? (
+                <ActivityIndicator size="small" color={p.onAccent} />
+              ) : (
+                <Icon sf="camera.fill" size={12} color={p.onAccent} />
+              )}
+            </View>
+          </Pressable>
           <View style={{ flex: 1 }}>
             <Pressable
               style={styles.nameRow}
@@ -496,6 +520,17 @@ const styles = StyleSheet.create({
   body: { padding: Spacing.three, gap: Spacing.four },
   meRow: { flexDirection: 'row', alignItems: 'center', gap: Spacing.three },
   meAvatar: { width: 72, height: 72, borderRadius: 36 },
+  avatarBadge: {
+    position: 'absolute',
+    right: -2,
+    bottom: -2,
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 2,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   meName: { fontSize: 26, fontWeight: '800', fontFamily: Fonts?.rounded },
   meArea: { fontSize: 14 },

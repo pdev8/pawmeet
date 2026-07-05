@@ -11,6 +11,7 @@ interface DbReview {
   rating: number;
   body: string;
   created_at: string;
+  photo_url: string | null;
 }
 
 function toReview(row: DbReview): StoredPlaceReview {
@@ -21,6 +22,7 @@ function toReview(row: DbReview): StoredPlaceReview {
     rating: row.rating,
     text: row.body,
     createdAt: row.created_at,
+    photoUrl: row.photo_url ?? null,
   };
 }
 
@@ -32,7 +34,7 @@ export async function fetchMyPlaceReviews(placeId: string): Promise<StoredPlaceR
   if (!user || !placeId) return [];
   const { data, error } = await supabase
     .from('place_reviews')
-    .select('id, place_id, author_id, rating, body, created_at')
+    .select('id, place_id, author_id, rating, body, created_at, photo_url')
     .eq('place_id', placeId)
     .eq('author_id', user.id)
     .order('created_at');
@@ -46,6 +48,7 @@ interface DbCommunityReview {
   rating: number;
   body: string;
   created_at: string;
+  photo_url: string | null;
   author: { display_name: string; avatar_url: string | null } | null;
 }
 
@@ -54,7 +57,7 @@ export async function fetchPlaceReviews(placeId: string): Promise<CommunityRevie
   if (!placeId) return [];
   const { data, error } = await supabase
     .from('place_reviews')
-    .select('id, author_id, rating, body, created_at, author:profiles(display_name, avatar_url)')
+    .select('id, author_id, rating, body, created_at, photo_url, author:profiles(display_name, avatar_url)')
     .eq('place_id', placeId)
     .order('created_at', { ascending: false });
   if (error) throw error;
@@ -66,10 +69,16 @@ export async function fetchPlaceReviews(placeId: string): Promise<CommunityRevie
     rating: r.rating,
     text: r.body,
     createdAt: r.created_at,
+    photoUrl: r.photo_url ?? null,
   }));
 }
 
-export async function addPlaceReview(placeId: string, rating: number, text: string): Promise<void> {
+export async function addPlaceReview(
+  placeId: string,
+  rating: number,
+  text: string,
+  photoUrl?: string | null,
+): Promise<void> {
   const body = text.trim();
   if (!placeId || rating < 1 || !body) return;
   const {
@@ -78,14 +87,22 @@ export async function addPlaceReview(placeId: string, rating: number, text: stri
   if (!user) throw new Error('Not signed in');
   const { error } = await supabase
     .from('place_reviews')
-    .insert({ place_id: placeId, author_id: user.id, rating, body });
+    .insert({ place_id: placeId, author_id: user.id, rating, body, photo_url: photoUrl ?? null });
   if (error) throw error;
 }
 
-export async function updatePlaceReview(id: string, rating: number, text: string): Promise<void> {
+export async function updatePlaceReview(
+  id: string,
+  rating: number,
+  text: string,
+  photoUrl?: string | null,
+): Promise<void> {
   const body = text.trim();
   if (rating < 1 || !body) return;
-  const { error } = await supabase.from('place_reviews').update({ rating, body }).eq('id', id);
+  const { error } = await supabase
+    .from('place_reviews')
+    .update({ rating, body, photo_url: photoUrl ?? null })
+    .eq('id', id);
   if (error) throw error;
 }
 
@@ -114,8 +131,17 @@ export function usePlaceReviews(placeId: string | undefined) {
 export function useAddPlaceReview() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ placeId, rating, text }: { placeId: string; rating: number; text: string }) =>
-      addPlaceReview(placeId, rating, text),
+    mutationFn: ({
+      placeId,
+      rating,
+      text,
+      photoUrl,
+    }: {
+      placeId: string;
+      rating: number;
+      text: string;
+      photoUrl?: string | null;
+    }) => addPlaceReview(placeId, rating, text, photoUrl),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['place-reviews'] }),
   });
 }
@@ -123,8 +149,17 @@ export function useAddPlaceReview() {
 export function useUpdatePlaceReview() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, rating, text }: { id: string; rating: number; text: string }) =>
-      updatePlaceReview(id, rating, text),
+    mutationFn: ({
+      id,
+      rating,
+      text,
+      photoUrl,
+    }: {
+      id: string;
+      rating: number;
+      text: string;
+      photoUrl?: string | null;
+    }) => updatePlaceReview(id, rating, text, photoUrl),
     onSuccess: () => qc.invalidateQueries({ queryKey: ['place-reviews'] }),
   });
 }

@@ -9,6 +9,7 @@ import { type PlaceReview } from './places';
 export interface DisplayReview extends PlaceReview {
   reviewId?: string;
   mine?: boolean;
+  photoUrl?: string | null;
 }
 
 /** A persisted review from any user, with the author profile resolved. */
@@ -20,6 +21,7 @@ export interface CommunityReview {
   rating: number;
   text: string;
   createdAt: string;
+  photoUrl?: string | null;
 }
 
 const FULL_STAR = '★';
@@ -52,6 +54,7 @@ export function mergeReviews(
         rating: r.rating,
         text: r.text,
         when: timeAgo(r.createdAt),
+        photoUrl: r.photoUrl ?? null,
       };
     });
   return [...real, ...demo];

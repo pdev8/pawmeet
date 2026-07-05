@@ -42,6 +42,7 @@ import {
 } from '@/lib/use-place-reviews';
 import { blendedRating, mergeReviews, stars } from '@/lib/reviews';
 import { DEFAULT_FILTERS } from '@/lib/filters';
+import { pickImage, uploadPublicImage } from '@/lib/storage';
 import { useDiscoverEvents } from '@/lib/use-events';
 import { useCurrentUserId } from '@/lib/use-rsvps';
 import { useStore } from '@/lib/store';
@@ -92,6 +93,8 @@ export default function MapScreen() {
   const [selected, setSelected] = useState<DogPlace | null>(null);
   const [myRating, setMyRating] = useState(0);
   const [myText, setMyText] = useState('');
+  const [myPhoto, setMyPhoto] = useState<string | null>(null);
+  const [uploadingReviewPhoto, setUploadingReviewPhoto] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
 
   const initialRegion: Region = {
@@ -123,6 +126,7 @@ export default function MapScreen() {
   useEffect(() => {
     setMyRating(0);
     setMyText('');
+    setMyPhoto(null);
     setEditingId(null);
   }, [selected?.id]);
 
@@ -219,15 +223,16 @@ export default function MapScreen() {
   const resetComposer = () => {
     setMyRating(0);
     setMyText('');
+    setMyPhoto(null);
     setEditingId(null);
   };
 
   const submitReview = () => {
     if (!selected || !canReview) return;
     if (editingId) {
-      updateReview.mutate({ id: editingId, rating: myRating, text: myText });
+      updateReview.mutate({ id: editingId, rating: myRating, text: myText, photoUrl: myPhoto });
     } else {
-      addReview.mutate({ placeId: selected.id, rating: myRating, text: myText });
+      addReview.mutate({ placeId: selected.id, rating: myRating, text: myText, photoUrl: myPhoto });
     }
     resetComposer();
     Keyboard.dismiss();
@@ -239,6 +244,20 @@ export default function MapScreen() {
     setEditingId(reviewId);
     setMyRating(r.rating);
     setMyText(r.text);
+    setMyPhoto(r.photoUrl ?? null);
+  };
+
+  const pickReviewPhoto = async () => {
+    const uri = await pickImage();
+    if (!uri) return;
+    setUploadingReviewPhoto(true);
+    try {
+      setMyPhoto(await uploadPublicImage('reviews', uri));
+    } catch (e) {
+      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setUploadingReviewPhoto(false);
+    }
   };
 
   const deleteReview = (reviewId: string) => {
@@ -464,6 +483,9 @@ export default function MapScreen() {
                       </Text>
                     </Text>
                     <Text style={[styles.reviewText, { color: p.text }]}>{r.text}</Text>
+                    {r.photoUrl ? (
+                      <Image source={{ uri: r.photoUrl }} style={styles.reviewPhoto} contentFit="cover" />
+                    ) : null}
                   </View>
                   {r.mine && r.reviewId ? (
                     <View style={styles.reviewRowActions}>
@@ -521,6 +543,17 @@ export default function MapScreen() {
                   {myRating ? `${myRating}/5` : 'Tap to rate'}
                 </Text>
               </View>
+              {myPhoto ? (
+                <View style={styles.reviewPhotoPreviewWrap}>
+                  <Image source={{ uri: myPhoto }} style={styles.reviewPhotoPreview} contentFit="cover" />
+                  <Pressable
+                    onPress={() => setMyPhoto(null)}
+                    accessibilityLabel="Remove photo"
+                    style={styles.reviewPhotoRemove}>
+                    <Icon sf="xmark.circle.fill" size={20} color="#fff" />
+                  </Pressable>
+                </View>
+              ) : null}
               <View style={styles.composerInputRow}>
                 <TextInput
                   value={myText}
@@ -533,6 +566,18 @@ export default function MapScreen() {
                     { color: p.text, borderColor: p.separator, backgroundColor: p.card },
                   ]}
                 />
+                <Pressable
+                  onPress={pickReviewPhoto}
+                  disabled={uploadingReviewPhoto}
+                  accessibilityRole="button"
+                  accessibilityLabel="Add a photo"
+                  style={[styles.sendBtn, { backgroundColor: p.chipBg }]}>
+                  {uploadingReviewPhoto ? (
+                    <ActivityIndicator size="small" color={p.accent} />
+                  ) : (
+                    <Icon sf="camera.fill" size={16} color={p.accent} />
+                  )}
+                </Pressable>
                 <Pressable
                   onPress={submitReview}
                   disabled={!canReview}
@@ -760,6 +805,10 @@ const styles = StyleSheet.create({
   reviewAvatar: { width: 30, height: 30, borderRadius: 15 },
   reviewAuthor: { fontSize: 13, fontWeight: '700' },
   reviewText: { fontSize: 13, lineHeight: 18, marginTop: 1 },
+  reviewPhoto: { width: '100%', height: 120, borderRadius: Radii.sm, marginTop: 6 },
+  reviewPhotoPreviewWrap: { alignSelf: 'flex-start', marginBottom: 6 },
+  reviewPhotoPreview: { width: 72, height: 72, borderRadius: Radii.sm },
+  reviewPhotoRemove: { position: 'absolute', top: -6, right: -6 },
   sheetActions: { flexDirection: 'row', flexWrap: 'wrap', gap: Spacing.two },
   composer: { gap: Spacing.two, marginTop: Spacing.half },
   composerHead: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
