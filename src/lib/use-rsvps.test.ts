@@ -6,9 +6,12 @@ vi.mock('./supabase', () => ({
 
 import { supabase } from './supabase';
 import {
+  approveRsvp,
   cancelMyRsvp,
+  declineRsvp,
   fetchEventRsvps,
   fetchGoingCounts,
+  fetchHostPendingRequests,
   goingCountOf,
   resolveGoingStatus,
   tallyGoing,
@@ -136,5 +139,93 @@ describe('cancelMyRsvp', () => {
   it('throws when signed out', async () => {
     auth.getUser.mockResolvedValue({ data: { user: null } });
     await expect(cancelMyRsvp('e1')).rejects.toThrow('Not signed in');
+  });
+});
+
+describe('fetchHostPendingRequests', () => {
+  it('maps pending rows to the host request shape', async () => {
+    auth.getUser.mockResolvedValue({ data: { user: { id: 'host1' } } });
+    // .select().eq('status',..).eq('events.host_id',..).eq('events.status',..)
+    const eq3 = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'r1',
+          event_id: 'e1',
+          user_id: 'u1',
+          profiles: { display_name: 'Sam', avatar_url: 'a.png' },
+          events: { title: 'Puppy Meetup', capacity: 6 },
+        },
+      ],
+      error: null,
+    });
+    const eq2 = vi.fn(() => ({ eq: eq3 }));
+    const eq1 = vi.fn(() => ({ eq: eq2 }));
+    from.mockReturnValue({ select: vi.fn(() => ({ eq: eq1 })) });
+
+    const out = await fetchHostPendingRequests();
+
+    expect(eq1).toHaveBeenCalledWith('status', 'pending_approval');
+    expect(eq2).toHaveBeenCalledWith('events.host_id', 'host1');
+    expect(out).toEqual([
+      {
+        rsvpId: 'r1',
+        eventId: 'e1',
+        eventTitle: 'Puppy Meetup',
+        capacity: 6,
+        userId: 'u1',
+        name: 'Sam',
+        avatar: 'a.png',
+      },
+    ]);
+  });
+});
+
+describe('approveRsvp', () => {
+  it('sets going when the event is under capacity', async () => {
+    // 1st from(): fetchGoingCounts -> select().in().eq()
+    const eqGoing = vi.fn().mockResolvedValue({ data: [{ event_id: 'e1', status: 'going' }], error: null });
+    const inFn = vi.fn(() => ({ eq: eqGoing }));
+    // 2nd from(): update().eq()
+    const eqUpd = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn(() => ({ eq: eqUpd }));
+    from
+      .mockReturnValueOnce({ select: vi.fn(() => ({ in: inFn })) })
+      .mockReturnValueOnce({ update });
+
+    await approveRsvp('r1', 'e1', 6);
+
+    expect(update).toHaveBeenCalledWith({ status: 'going' });
+    expect(eqUpd).toHaveBeenCalledWith('id', 'r1');
+  });
+
+  it('waitlists when the event is already full', async () => {
+    const eqGoing = vi.fn().mockResolvedValue({
+      data: [
+        { event_id: 'e1', status: 'going' },
+        { event_id: 'e1', status: 'going' },
+      ],
+      error: null,
+    });
+    const update = vi.fn(() => ({ eq: vi.fn().mockResolvedValue({ error: null }) }));
+    from
+      .mockReturnValueOnce({ select: vi.fn(() => ({ in: vi.fn(() => ({ eq: eqGoing })) })) })
+      .mockReturnValueOnce({ update });
+
+    await approveRsvp('r1', 'e1', 2);
+
+    expect(update).toHaveBeenCalledWith({ status: 'waitlisted' });
+  });
+});
+
+describe('declineRsvp', () => {
+  it('marks the RSVP declined_by_host', async () => {
+    const eq = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn(() => ({ eq }));
+    from.mockReturnValue({ update });
+
+    await declineRsvp('r1');
+
+    expect(update).toHaveBeenCalledWith({ status: 'declined_by_host' });
+    expect(eq).toHaveBeenCalledWith('id', 'r1');
   });
 });
