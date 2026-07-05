@@ -39,7 +39,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [x] In-app account deletion flow — `delete_current_user` RPC + ON DELETE CASCADE (verified end-to-end); meets the Apple requirement
 - [x] Swap zustand mock store → real data layer (TanStack Query) — client (#6), Profile (#9), Pets (#10), Place reviews (#11), Events (#12), RSVP core (#13), Comments (#14), attendee badges + going counts (#15), host approve/decline (#16) — all verified e2e
 - [x] Replace mock timers (host approval ~6s, canned replies ~7s) with real writes — retired the setTimeout fakes; real writes via use-rsvps/use-comments (#17)
-- [~] PostGIS radius search — `nearby_events(lat,lng,radius)` RPC created; app still uses haversine until the client layer lands
+- [x] PostGIS radius search — `nearby_events(lat,lng,radius)` RPC now drives Discover server-side (#18); haversine only computes display distance
 - [~] Scheduled archival job — `archive_past_events()` created; enable pg_cron in the dashboard to schedule it hourly
 
 ## EPIC 2 — Map & Places  🟢
