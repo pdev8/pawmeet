@@ -1,9 +1,11 @@
 import { DarkTheme, DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { Stack } from 'expo-router';
 import { useEffect } from 'react';
-import { useColorScheme } from 'react-native';
+import { ActivityIndicator, useColorScheme, View } from 'react-native';
 
+import { AuthScreen } from '@/components/auth-screen';
 import { Colors } from '@/constants/theme';
+import { useAuth } from '@/lib/auth';
 import { DEFAULT_CENTER, DEFAULT_CENTER_LABEL } from '@/lib/geo';
 import { useStore } from '@/lib/store';
 
@@ -12,6 +14,7 @@ export default function RootLayout() {
   const palette = scheme === 'dark' ? Colors.dark : Colors.light;
   const base = scheme === 'dark' ? DarkTheme : DefaultTheme;
   const hydrated = useStore((s) => s.hasHydrated);
+  const { session, loading: authLoading } = useAuth();
 
   useEffect(() => {
     if (!hydrated) return;
@@ -34,14 +37,28 @@ export default function RootLayout() {
           text: palette.text,
         },
       }}>
-      <Stack>
-        <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-        <Stack.Screen name="event/[id]" options={{ headerShown: false }} />
-        <Stack.Screen
-          name="map"
-          options={{ headerShown: false, presentation: 'fullScreenModal' }}
-        />
-      </Stack>
+      {authLoading ? (
+        <View
+          style={{
+            flex: 1,
+            alignItems: 'center',
+            justifyContent: 'center',
+            backgroundColor: palette.background,
+          }}>
+          <ActivityIndicator color={palette.accent} />
+        </View>
+      ) : session ? (
+        <Stack>
+          <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
+          <Stack.Screen name="event/[id]" options={{ headerShown: false }} />
+          <Stack.Screen
+            name="map"
+            options={{ headerShown: false, presentation: 'fullScreenModal' }}
+          />
+        </Stack>
+      ) : (
+        <AuthScreen />
+      )}
     </ThemeProvider>
   );
 }

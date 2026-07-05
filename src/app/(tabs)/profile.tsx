@@ -21,6 +21,7 @@ import { EventRow } from '@/components/event-row';
 import { Icon } from '@/components/icon';
 import { BottomTabInset, Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
+import { signOut } from '@/lib/auth';
 import { BREEDS } from '@/lib/breeds';
 import {
   hostedEvents,
@@ -297,8 +298,19 @@ export default function ProfileScreen() {
           }>
           <Text style={[styles.reset, { color: p.danger }]}>Reset demo data</Text>
         </Pressable>
+
+        <Pressable
+          onPress={() =>
+            Alert.alert('Sign out?', 'You can sign back in anytime.', [
+              { text: 'Cancel', style: 'cancel' },
+              { text: 'Sign out', style: 'destructive', onPress: () => signOut() },
+            ])
+          }>
+          <Text style={[styles.reset, { color: p.textSecondary }]}>Sign out</Text>
+        </Pressable>
+
         <Text style={[styles.buildNote, { color: p.textSecondary }]}>
-          Pawk v1 demo — all data is local & mock. No backend yet.
+          Pawk v1 demo — events & comments are still local mock data. Auth is live (Supabase).
         </Text>
       </ScrollView>
 
