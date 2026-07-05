@@ -10,22 +10,32 @@ the **source of truth for status**; the other docs cover different angles:
 | [AGENTS.md](AGENTS.md) | how the code is structured (for coding agents) |
 | [README.md](README.md) | how to run it + a demo tour |
 
-## Current state (2026-07-04)
+## Current state (2026-07-05)
 
-Built on a **local mock store** (zustand + AsyncStorage, no backend), so every
-flow is testable on-device today:
-- **Events:** discover (radius / date / breed / venue filters, sorts), post
-  (5-step wizard), event detail, archive sweep + "Host it again".
-- **Social:** RSVP with capacity → waitlist → promotion, host-approval flow,
-  threaded comments with host moderation. Backend liveness is faked with timers.
-- **Dog-friendly map:** live OpenStreetMap areas (dog parks / parks / reserves /
-  beaches / trails), one color per category driving polygons + hatch + filter
-  chips, place detail with hours, and **community reviews** (add / edit / delete
-  your own, on-device only).
-- **Tooling:** ESLint wired up (`npx expo lint`); web preview bundles.
+Running on a **real Supabase backend** (Postgres + PostGIS + RLS + Storage) via
+TanStack Query hooks; the old zustand mock store now only backs seed/demo events
+and a fallback path. **Epic 1 (backend) and Epic 11 (trust & safety) are complete.**
+- **Events:** discover (server-side `nearby_events` PostGIS radius + client date/
+  breed/venue filters/sorts), post (5-step wizard, real cover-photo upload),
+  event detail, hourly archival via pg_cron, "Host it again".
+- **Social:** real RSVP (capacity → waitlist, host approve/decline from Inbox),
+  threaded comments with host moderation, going counts + attendee strips, user
+  profiles (tap attendee/host/commenter) with report + block.
+- **Trust & safety:** report events/users/comments → **admin moderation queue**
+  (`admin/` console, `admins` allowlist + `is_admin` RLS); block user (mutual
+  hide); age gate (17+) + community guidelines.
+- **Dog-friendly map:** live OSM areas (dog parks / parks / reserves / beaches /
+  trails), color-coded polygons + hatch + chips, place detail with hours, and
+  **community reviews persisted to Supabase** (all users, real timestamps, count).
+- **Photos:** Supabase Storage (`photos` bucket) — pet photos + event covers.
+- **Admin console:** `admin/` static web app — Operations / Moderation / Events / Users.
+- **Demo data:** an Orange County seed (15 users, 14 events, RSVPs, comments, 53
+  place reviews) lives in the linked project — see `scripts/` + the `/seed-demo` skill.
+- **Tooling:** 138 Vitest tests; ESLint; web preview bundles.
 
-Everything is against **mock data** — the real backend (Epic 1) is the keystone
-that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
+Remaining before launch is mostly Epic 15 (App Store submission / legal / ops) plus
+polish epics. Sign in with Apple (Epic 1) is deferred pending a dev build; native
+email/password is a placeholder for SSO. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 
 **Legend:** 🟢 independent (grab anytime) · 🔴 blocks/unblocks others · ⭐ suggested next · 🚫 App Store submission blocker (Apple rejects without it)
 

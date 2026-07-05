@@ -46,10 +46,14 @@ exercised on the user's iPhone via Expo Go — neither this machine nor CI can.
 
 ## Architecture
 
-**Mock backend in a zustand store.** There is no server. `src/lib/store.ts` is
-the single source of truth: all entities (users, pets, events, rsvps, comments,
-notifications) live in one persisted store (AsyncStorage key `pawmeet-demo-v1`).
-Store actions encode the business rules a backend would own:
+**Two layers: real Supabase backend + a legacy mock store.** The real backend
+(see below) now owns every core flow. `src/lib/store.ts` (zustand, persisted to
+AsyncStorage key `pawmeet-demo-v1`) remains for the **seed/demo events** and as a
+**fallback** the app degrades to when a screen has no Supabase row yet. Screens
+branch on whether the entity came from Supabase — e.g. `event/[id]` renders the
+`Supabase*` variants (RSVP bar, comments, attendee strips, host card) when
+`useEvent(id)` returns a row, else the mock ones for seed events. Store actions
+still encode the business rules for that demo layer:
 
 - `archiveSweep()` — events auto-archive 24h after `endsAt`; called on app
   start from the root layout. Archived events: hidden from discovery, comments
@@ -64,6 +68,35 @@ Store actions encode the business rules a backend would own:
 - `reseed(center, label)` — regenerates all demo data from `src/lib/seed.ts`
   around a geo center (real GPS on first launch, else Austin), preserving the
   user's profile/pets.
+- `ageConfirmed` / `confirmAge()` — persisted one-time 17+ gate (root layout
+  shows `AgeGate` before the app); `resetAgeGate()` is a `__DEV__`-only re-test helper.
+
+**Real backend (Supabase).** `src/lib/supabase.ts` is the JS-only client
+(`@supabase/supabase-js`, works in Expo Go); config from gitignored `.env`
+(`EXPO_PUBLIC_SUPABASE_URL/_ANON_KEY`). Server state is TanStack Query
+(`QueryClientProvider` in the root layout, `src/lib/query.ts`); each feature is a
+`use-<feature>.ts` module exporting plain async fns (fetch/mutations, unit-tested
+with a mocked supabase) plus hooks that invalidate query keys. Migrated features:
+auth (`auth.ts`, email/password — a placeholder for SSO later), Profile, Pets,
+Events (`use-events.ts`, discovery via the `nearby_events` PostGIS RPC), RSVP +
+host approve/decline (`use-rsvps.ts`), Comments (`use-comments.ts`), Place reviews
+(`use-place-reviews.ts`), Reports (`use-reports.ts`), Blocks (`use-blocks.ts`,
+mutual hide across discovery/comments/attendees), User profiles
+(`use-user-profile.ts`), Storage uploads (`storage.ts`). DB lives in
+`supabase/migrations/` (Postgres + PostGIS + RLS): tables profiles, pets, events,
+rsvps, comments, place_reviews, reports, blocks, admins, favorites, notifications;
+RPCs `nearby_events`, `archive_past_events` (scheduled hourly via **pg_cron**),
+`delete_current_user`, `is_admin`; a public `photos` Storage bucket (per-user
+folder RLS). Apply migrations with `npx supabase db push` (the `/sync` skill does
+this). Verify backend slices by REST e2e with a throwaway user (create → operate
+→ `delete_current_user`), asserting RLS/CHECK rejections.
+
+**Admin console (`admin/`).** A standalone static web app (plain HTML/CSS/JS +
+`@supabase/supabase-js` from CDN, no build step) for operators — separate from
+the Expo app. Sign in with any Pawk account; the **Moderation** panel (report
+queue + resolve/dismiss) shows only to rows in the `admins` table
+(`is_admin` RLS). Run with `npx serve admin`; `admin/config.js` is gitignored
+(copy from `config.example.js`). See `admin/README.md`.
 
 **Reading state:** selectors in `src/lib/selectors.ts` and the discovery query
 in `src/lib/filters.ts` are plain functions taking the state object (not hooks) —
@@ -85,11 +118,12 @@ capped for map perf. Each category has one distinct hue in `CATEGORY_COLORS`
 the filter chip together, so a chip visually matches the areas it toggles.
 `src/lib/hatch.ts` scan-line-clips crosshatch segments to each polygon (density
 tuned by `spacingM` / `maxLinesPerDirection`). Place detail sheet shows OSM hours
-+ **community reviews**: `placeReviews` in the store (keyed by place id, one entry
-per review — add / edit / delete your own, multiple per place) merged newest-first
-above deterministic demo reviews from `demoReviews()`, blended into a headline
-rating. The review composer is inline in the sheet, lifted over the keyboard with
-`KeyboardAvoidingView` (the sheet floats at the bottom over the map).
++ **community reviews** from Supabase: `use-place-reviews.ts` fetches all users'
+reviews for a place (keyed by the OSM id, `way-<id>`) with author profiles
+embedded; `reviews.ts` merges them newest-first (real `timeAgo` timestamps, your
+own labelled "You" for edit/delete) above deterministic demo reviews from
+`demoReviews()`, blended into a headline rating + count. The review composer is
+inline in the sheet, lifted over the keyboard with `KeyboardAvoidingView`.
 
 **Web preview.** The app is iOS-first, but `metro.config.js` adds a web-only
 resolver (react-native-maps → empty, zustand → CJS build) and `map.web.tsx` is a
