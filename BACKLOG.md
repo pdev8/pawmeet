@@ -51,11 +51,11 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [ ] Legend / key for the category colors
 
 ## EPIC 3 — Place Reviews (extend what's built)  🟢 ⭐
-- [ ] Persist reviews to backend (currently on-device only)
-- [ ] Real relative timestamps instead of "Just now"
-- [ ] Show review count next to the star rating
-- [ ] Attach a photo to a review
-- [ ] Report / flag a review (ties into moderation epic)
+- [x] Persist reviews to backend — community reviews (all users) via `place_reviews`, author profiles embedded (#26)
+- [x] Real relative timestamps instead of "Just now" — `timeAgo` on real reviews (#26)
+- [x] Show review count next to the star rating — "N reviews" in the place sheet (#26)
+- [ ] Attach a photo to a review — needs Supabase Storage
+- [ ] Report / flag a review (ties into moderation epic) — extend the report flow with a `'review'` target
 
 ## EPIC 4 — Discovery / Search  🟢 ⭐
 - [x] "Has spots left" toggle — already in the filter sheet
