@@ -67,7 +67,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 
 ## EPIC 5 — Post / Host an Event  🟢
 - [ ] Address autocomplete (MapKit search) in the Where step
-- [~] Real cover-photo upload (currently placedog.net) — Storage foundation shipped (public `photos` bucket + RLS + `uploadPublicImage`/`pickImage`), wired to pet photos first (#29); event cover + review photos are the next surfaces
+- [x] Real cover-photo upload — Storage foundation (public `photos` bucket + RLS, `uploadPublicImage`/`pickImage`, #29) + Upload tile in the Post wizard (#30); placedog presets kept as quick options
 - [ ] Edit event (notify attendees of time/place changes)
 - [ ] Host dashboard: attendee + pet list, headcount incl. dogs
 - [x] Recurring events (weekly / biweekly / monthly) — recurrence option in the post wizard; auto-advances to the next occurrence instead of archiving
