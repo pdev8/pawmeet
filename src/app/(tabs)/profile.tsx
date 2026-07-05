@@ -23,6 +23,7 @@ import { BottomTabInset, Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { deleteAccount, signOut } from '@/lib/auth';
 import { BREEDS } from '@/lib/breeds';
+import { useBlockActions, useBlockedList } from '@/lib/use-blocks';
 import { useAddPet, useMyPets, useUpdatePet } from '@/lib/use-pets';
 import { useProfile, useUpdateProfile } from '@/lib/use-profile';
 import {
@@ -87,6 +88,8 @@ export default function ProfileScreen() {
   const { data: profile } = useProfile();
   const updateProfile = useUpdateProfile();
   const { data: pets = [] } = useMyPets();
+  const { data: blockedUsers = [] } = useBlockedList();
+  const blockActions = useBlockActions();
   const addPet = useAddPet();
   const updatePet = useUpdatePet();
   const me = store.users[store.currentUserId];
@@ -287,6 +290,22 @@ export default function ProfileScreen() {
           </Section>
         ) : null}
 
+        {blockedUsers.length > 0 ? (
+          <Section
+            title="BLOCKED"
+            collapsed={!!collapsed.blocked}
+            onToggle={() => toggleSection('blocked')}>
+            {blockedUsers.map((u) => (
+              <View key={u.id} style={styles.blockedRow}>
+                <Text style={[styles.blockedName, { color: p.text }]} numberOfLines={1}>
+                  {u.name}
+                </Text>
+                <Chip small label="Unblock" onPress={() => blockActions.unblock.mutate(u.id)} />
+              </View>
+            ))}
+          </Section>
+        ) : null}
+
         <Pressable
           onPress={() =>
             Alert.alert(
@@ -478,6 +497,14 @@ const styles = StyleSheet.create({
   petName: { fontSize: 16, fontWeight: '700' },
   petMeta: { fontSize: 13 },
   reset: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
+  blockedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: Spacing.two,
+    gap: Spacing.two,
+  },
+  blockedName: { flex: 1, fontSize: 15, fontWeight: '600' },
   buildNote: { fontSize: 11, textAlign: 'center' },
   scrim: {
     flex: 1,

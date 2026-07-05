@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { rankDiscoverEvents, type DiscoveryItem, type Filters } from './filters';
+import { fetchBlockedIds } from './use-blocks';
 import { fetchGoingCounts } from './use-rsvps';
 import { supabase } from './supabase';
 import type {
@@ -90,7 +91,8 @@ export async function fetchDiscoverEvents(center: LatLng, filters: Filters): Pro
     p_radius_m: filters.radiusMi * MILES_TO_METERS,
   });
   if (error) throw error;
-  const events = (data as DbEvent[]).map(toEvent);
+  const blocked = new Set(await fetchBlockedIds());
+  const events = (data as DbEvent[]).map(toEvent).filter((e) => !blocked.has(e.hostId));
   const goingCounts = await fetchGoingCounts(events.map((e) => e.id));
   return rankDiscoverEvents(events, center, filters, goingCounts);
 }

@@ -19,6 +19,7 @@ import {
   useEventComments,
   type DisplayComment,
 } from '@/lib/use-comments';
+import { useBlockActions, useBlockedIds } from '@/lib/use-blocks';
 import { useReportContent } from '@/lib/use-reports';
 import { useCurrentUserId, useEventRsvps } from '@/lib/use-rsvps';
 import type { EventComment, PetEvent, User } from '@/lib/types';
@@ -254,6 +255,7 @@ function SupabaseCommentRow({
   onEdit,
   onDelete,
   onReport,
+  onBlock,
 }: {
   comment: DisplayComment;
   event: PetEvent;
@@ -265,6 +267,7 @@ function SupabaseCommentRow({
   onEdit: (id: string, body: string) => void;
   onDelete: (id: string, by: 'author' | 'host') => void;
   onReport: (id: string) => void;
+  onBlock: (authorId: string, name: string) => void;
 }) {
   const p = usePalette();
   const [editing, setEditing] = useState(false);
@@ -381,9 +384,14 @@ function SupabaseCommentRow({
               </Pressable>
             ) : null}
             {!isMine && !iAmHost ? (
-              <Pressable onPress={() => onReport(comment.id)}>
-                <Text style={[styles.action, { color: p.textSecondary }]}>Report</Text>
-              </Pressable>
+              <>
+                <Pressable onPress={() => onReport(comment.id)}>
+                  <Text style={[styles.action, { color: p.textSecondary }]}>Report</Text>
+                </Pressable>
+                <Pressable onPress={() => onBlock(comment.authorId, author.displayName)}>
+                  <Text style={[styles.action, { color: p.textSecondary }]}>Block</Text>
+                </Pressable>
+              </>
             ) : null}
           </View>
         ) : null}
@@ -397,11 +405,22 @@ export function SupabaseCommentsSection({ event }: { event: PetEvent }) {
   const [text, setText] = useState('');
   const [replyTo, setReplyTo] = useState<DisplayComment | null>(null);
 
-  const { data: comments = [] } = useEventComments(event.id);
+  const { data: allComments = [] } = useEventComments(event.id);
   const { data: myId } = useCurrentUserId();
   const { data: rsvps = [] } = useEventRsvps(event.id);
+  const { data: blockedIds = [] } = useBlockedIds();
   const actions = useCommentActions(event.id);
   const report = useReportContent();
+  const blocks = useBlockActions();
+
+  const blocked = new Set(blockedIds);
+  const comments = allComments.filter((c) => !blocked.has(c.authorId));
+
+  const onBlock = (authorId: string, name: string) =>
+    Alert.alert(`Block ${name}?`, 'You won’t see their events, RSVPs, or comments, and they won’t see yours.', [
+      { text: 'Cancel', style: 'cancel' },
+      { text: 'Block', style: 'destructive', onPress: () => blocks.block.mutate(authorId) },
+    ]);
 
   const onReport = (commentId: string) =>
     Alert.alert('Report this comment?', 'Our team will review it.', [
@@ -505,6 +524,7 @@ export function SupabaseCommentsSection({ event }: { event: PetEvent }) {
             onEdit={(id, body) => actions.edit.mutate({ id, body })}
             onDelete={(id, by) => actions.remove.mutate({ id, by })}
             onReport={onReport}
+            onBlock={onBlock}
           />
           {repliesFor(c.id).map((r) => (
             <SupabaseCommentRow
@@ -519,6 +539,7 @@ export function SupabaseCommentsSection({ event }: { event: PetEvent }) {
               onEdit={(id, body) => actions.edit.mutate({ id, body })}
               onDelete={(id, by) => actions.remove.mutate({ id, by })}
               onReport={onReport}
+              onBlock={onBlock}
             />
           ))}
         </View>
