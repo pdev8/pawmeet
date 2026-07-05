@@ -36,6 +36,19 @@ git checkout main && git pull origin main
 `gh` lives at `/opt/homebrew/bin` (auth in keyring). If a merge conflict or a
 failed check appears, stop and surface it rather than forcing.
 
+## 3b. Apply DB migrations (if the diff touched supabase/migrations/)
+The GitHub integration does NOT reliably auto-apply migrations, so apply them
+explicitly after merge:
+```
+npx supabase db push          # applies pending migrations to the linked project
+```
+Requires a one-time link: `npx supabase login` then
+`npx supabase link --project-ref zrtkimehqnbuogegwroj` (interactive — the user
+does this once). If the CLI isn't linked/authed yet, stop and ask the user to
+run those, or to paste the migration SQL into the dashboard SQL Editor. After
+pushing, sanity-check the new column/function via a quick REST/RPC call before
+declaring the slice done.
+
 ## 4. Backlog + tracker (if the merge completed or added a backlog item)
 Same as `/ship` step 5: tick the item in `BACKLOG.md`, mirror it in
 `docs/backlog-tracker.html` (`done: true`), re-publish the artifact to the SAME
