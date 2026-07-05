@@ -50,11 +50,13 @@ interface AppState {
   placeReviews: Record<string, StoredPlaceReview[]>;
   favorites: string[];
   draft: Partial<EventDraft> | null;
+  editEvent: PetEvent | null;
   ageConfirmed: boolean;
 
   setHasHydrated: (v: boolean) => void;
   confirmAge: () => void;
   resetAgeGate: () => void;
+  setEditEvent: (e: PetEvent | null) => void;
   reseed: (center: LatLng, label: string, keepProfile?: boolean) => void;
   adoptGpsCenter: (center: LatLng) => void;
   archiveSweep: () => void;
@@ -117,11 +119,13 @@ export const useStore = create<AppState>()(
       placeReviews: {},
       favorites: [],
       draft: null,
+      editEvent: null,
       ageConfirmed: false,
 
       setHasHydrated: (v) => set({ hasHydrated: v }),
       confirmAge: () => set({ ageConfirmed: true }),
       resetAgeGate: () => set({ ageConfirmed: false }),
+      setEditEvent: (e) => set({ editEvent: e }),
 
       reseed: (center, label, keepProfile = true) => {
         const s = get();

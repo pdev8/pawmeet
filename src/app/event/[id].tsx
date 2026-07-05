@@ -208,7 +208,9 @@ function SupabaseReportEvent({ event }: { event: PetEvent }) {
 // data. Host approve/decline still happens via the (mock) Inbox for now.
 function SupabaseRsvpBar({ event }: { event: PetEvent }) {
   const p = usePalette();
+  const router = useRouter();
   const insets = useSafeAreaInsets();
+  const setEditEvent = useStore((s) => s.setEditEvent);
   const { data: uid } = useCurrentUserId();
   const { data: rsvps = [] } = useEventRsvps(event.id);
   const actions = useRsvpActions(event.id);
@@ -235,6 +237,13 @@ function SupabaseRsvpBar({ event }: { event: PetEvent }) {
         <View style={styles.hostBarText}>
           <Text style={[styles.rsvpState, { color: p.text }]}>You&apos;re hosting</Text>
         </View>
+        <Chip
+          label="Edit"
+          onPress={() => {
+            setEditEvent(event);
+            router.push('/post');
+          }}
+        />
       </Glass>
     );
   }

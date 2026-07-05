@@ -25,7 +25,7 @@ import { BREEDS } from '@/lib/breeds';
 import { at } from '@/lib/dates';
 import { offsetMi } from '@/lib/geo';
 import { pickImage, uploadPublicImage } from '@/lib/storage';
-import { useCreateEvent } from '@/lib/use-events';
+import { useCreateEvent, useUpdateEvent } from '@/lib/use-events';
 import { useStore } from '@/lib/store';
 import {
   RECURRENCE_LABELS,
@@ -79,9 +79,13 @@ export default function PostScreen() {
   const p = usePalette();
   const router = useRouter();
   const createEvent = useCreateEvent();
+  const updateEvent = useUpdateEvent();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(freshForm);
   const [uploadingCover, setUploadingCover] = useState(false);
+  // When editing an existing event: its id + original coords (edit keeps the pin).
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editCoords, setEditCoords] = useState<{ lat: number; lng: number } | null>(null);
 
   const pickCover = async () => {
     const uri = await pickImage();
@@ -97,10 +101,36 @@ export default function PostScreen() {
     }
   };
 
-  // "Host it again" hands a prefilled draft through the store.
+  // Edit ("edit this event") and "Host it again" both hand off through the store.
   useFocusEffect(
     useCallback(() => {
-      const draft = useStore.getState().draft;
+      const { editEvent, draft } = useStore.getState();
+      if (editEvent) {
+        const start = new Date(editEvent.startsAt);
+        const durH = Math.max(
+          0.5,
+          (new Date(editEvent.endsAt).getTime() - start.getTime()) / 3600000,
+        );
+        setForm({
+          title: editEvent.title,
+          description: editEvent.description,
+          coverPhotoUrl: editEvent.coverPhotoUrl,
+          start,
+          durH,
+          venueType: editEvent.venueType,
+          address: editEvent.address,
+          useMyLocation: false,
+          breedFocus: editEvent.breedFocus ?? null,
+          capacity: editEvent.capacity != null ? String(editEvent.capacity) : '',
+          rsvpMode: editEvent.rsvpMode === 'host_approves' ? 'host_approves' : 'open',
+          recurrence: editEvent.recurrence ?? null,
+        });
+        setEditingId(editEvent.id);
+        setEditCoords({ lat: editEvent.lat, lng: editEvent.lng });
+        setStep(0);
+        useStore.getState().setEditEvent(null);
+        return;
+      }
       if (draft) {
         setForm((f) => ({
           ...freshForm(),
@@ -164,24 +194,37 @@ export default function PostScreen() {
       : offsetMi(s.center, jitter() * 2, jitter() * 2);
     const end = new Date(form.start.getTime() + form.durH * 3600 * 1000);
     const capacity = parseInt(form.capacity, 10);
+    const fields = {
+      title: form.title.trim(),
+      description: form.description.trim() || 'See you there! 🐾',
+      coverPhotoUrl: form.coverPhotoUrl,
+      startsAt: form.start.toISOString(),
+      endsAt: end.toISOString(),
+      venueType: form.venueType,
+      address: form.address.trim() || 'Near your area',
+      areaLabel:
+        form.venueType === 'home_backyard' ? 'Near you' : form.address.trim() || 'Near you',
+      breedFocus: form.breedFocus ?? undefined,
+      capacity: Number.isFinite(capacity) && capacity > 0 ? capacity : undefined,
+      rsvpMode: form.rsvpMode,
+      recurrence: form.recurrence ?? undefined,
+    };
     try {
-      const id = await createEvent.mutateAsync({
-        title: form.title.trim(),
-        description: form.description.trim() || 'See you there! 🐾',
-        coverPhotoUrl: form.coverPhotoUrl,
-        startsAt: form.start.toISOString(),
-        endsAt: end.toISOString(),
-        venueType: form.venueType,
-        address: form.address.trim() || 'Near your area',
-        areaLabel:
-          form.venueType === 'home_backyard' ? 'Near you' : form.address.trim() || 'Near you',
-        breedFocus: form.breedFocus ?? undefined,
-        capacity: Number.isFinite(capacity) && capacity > 0 ? capacity : undefined,
-        rsvpMode: form.rsvpMode,
-        recurrence: form.recurrence ?? undefined,
-        lat: loc.lat,
-        lng: loc.lng,
-      });
+      if (editingId) {
+        // Editing keeps the event's original pin (address relocation is a follow-up).
+        await updateEvent.mutateAsync({
+          id: editingId,
+          patch: { ...fields, lat: editCoords?.lat, lng: editCoords?.lng },
+        });
+        const id = editingId;
+        setEditingId(null);
+        setEditCoords(null);
+        setForm(freshForm());
+        setStep(0);
+        router.push(`/event/${id}`);
+        return;
+      }
+      const id = await createEvent.mutateAsync({ ...fields, lat: loc.lat, lng: loc.lng });
       setForm(freshForm());
       setStep(0);
       router.push(`/event/${id}`);
@@ -198,7 +241,9 @@ export default function PostScreen() {
 
   return (
     <SafeAreaView style={[styles.screen, { backgroundColor: p.background }]} edges={['top']}>
-      <Text style={[styles.title, { color: p.text }]}>Host an event</Text>
+      <Text style={[styles.title, { color: p.text }]}>
+        {editingId ? 'Edit event' : 'Host an event'}
+      </Text>
 
       <View style={styles.progress}>
         {STEPS.map((label, i) => (
@@ -455,7 +500,9 @@ export default function PostScreen() {
             <Chip label="Back" onPress={() => setStep((s) => s - 1)} style={styles.footerBtn} />
           ) : null}
           <Chip
-            label={step === STEPS.length - 1 ? 'Publish 🎉' : 'Next'}
+            label={
+              step === STEPS.length - 1 ? (editingId ? 'Save changes' : 'Publish 🎉') : 'Next'
+            }
             selected
             onPress={step === STEPS.length - 1 ? publish : next}
             style={styles.footerBtn}

@@ -133,6 +133,40 @@ export async function createEvent(input: NewEvent): Promise<string> {
   return (data as { id: string }).id;
 }
 
+export type EventPatch = Partial<NewEvent>;
+
+/** Update a host's own event (RLS enforces host-only). Only maps provided keys. */
+export async function updateEvent(id: string, patch: EventPatch): Promise<void> {
+  const row: Record<string, unknown> = {};
+  if (patch.title !== undefined) row.title = patch.title;
+  if (patch.description !== undefined) row.description = patch.description;
+  if (patch.coverPhotoUrl !== undefined) row.cover_photo_url = patch.coverPhotoUrl;
+  if (patch.startsAt !== undefined) row.starts_at = patch.startsAt;
+  if (patch.endsAt !== undefined) row.ends_at = patch.endsAt;
+  if (patch.venueType !== undefined) row.venue_type = patch.venueType;
+  if (patch.address !== undefined) row.address = patch.address;
+  if (patch.areaLabel !== undefined) row.area_label = patch.areaLabel;
+  if (patch.breedFocus !== undefined) row.breed_focus = patch.breedFocus ?? null;
+  if (patch.capacity !== undefined) row.capacity = patch.capacity ?? null;
+  if (patch.rsvpMode !== undefined) row.rsvp_mode = patch.rsvpMode;
+  if (patch.recurrence !== undefined) row.recurrence = patch.recurrence ?? null;
+  if (patch.lat !== undefined) row.lat = patch.lat;
+  if (patch.lng !== undefined) row.lng = patch.lng;
+  const { error } = await supabase.from('events').update(row).eq('id', id);
+  if (error) throw error;
+}
+
+export function useUpdateEvent() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: ({ id, patch }: { id: string; patch: EventPatch }) => updateEvent(id, patch),
+    onSuccess: (_data, { id }) => {
+      qc.invalidateQueries({ queryKey: ['events'] });
+      qc.invalidateQueries({ queryKey: ['event', id] });
+    },
+  });
+}
+
 export function useDiscoverEvents(center: LatLng, filters: Filters) {
   return useQuery({
     queryKey: ['events', 'discover', center, filters],
