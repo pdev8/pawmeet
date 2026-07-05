@@ -40,7 +40,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [x] Swap zustand mock store → real data layer (TanStack Query) — client (#6), Profile (#9), Pets (#10), Place reviews (#11), Events (#12), RSVP core (#13), Comments (#14), attendee badges + going counts (#15), host approve/decline (#16) — all verified e2e
 - [x] Replace mock timers (host approval ~6s, canned replies ~7s) with real writes — retired the setTimeout fakes; real writes via use-rsvps/use-comments (#17)
 - [x] PostGIS radius search — `nearby_events(lat,lng,radius)` RPC now drives Discover server-side (#18); haversine only computes display distance
-- [~] Scheduled archival job — `archive_past_events()` created; enable pg_cron in the dashboard to schedule it hourly
+- [x] Scheduled archival job — `archive_past_events()` scheduled hourly via pg_cron (#19, applied to the linked project)
 
 ## EPIC 2 — Map & Places  🟢
 - [ ] Persist filter selections across sessions
@@ -103,7 +103,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 ## EPIC 11 — Trust, Safety & Moderation  🟢 (launch-critical for a UGC app)
 - [ ] Report event / user / comment  🚫 (UGC apps need report or Apple rejects)
 - [ ] Block user (mutual hide of events, RSVPs, comments)  🚫
-- [ ] Simple admin moderation-queue web view + a process/owner for reviewing reports
+- [~] Simple admin moderation-queue web view + a process/owner for reviewing reports — admin console foundation started (`admin/`, read-only Operations/Events/Users, #19); needs `is_admin` role + moderation writes
 - [ ] Age gate (17+) + community guidelines text on events  🚫
 
 ## EPIC 12 — Design System & Accessibility  🟢
