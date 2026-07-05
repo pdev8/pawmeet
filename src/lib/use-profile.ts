@@ -11,7 +11,8 @@ export interface Profile {
 
 type ProfilePatch = Partial<Pick<Profile, 'display_name' | 'avatar_url' | 'home_area'>>;
 
-async function fetchProfile(): Promise<Profile | null> {
+/** Fetch the signed-in user's profile row (null when signed out). */
+export async function fetchProfile(): Promise<Profile | null> {
   const {
     data: { user },
   } = await supabase.auth.getUser();
@@ -25,6 +26,16 @@ async function fetchProfile(): Promise<Profile | null> {
   return data as Profile;
 }
 
+/** Update the signed-in user's profile row. */
+export async function updateProfile(patch: ProfilePatch): Promise<void> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) throw new Error('Not signed in');
+  const { error } = await supabase.from('profiles').update(patch).eq('id', user.id);
+  if (error) throw error;
+}
+
 /** The signed-in user's profile row. */
 export function useProfile() {
   return useQuery({ queryKey: ['profile'], queryFn: fetchProfile });
@@ -34,14 +45,7 @@ export function useProfile() {
 export function useUpdateProfile() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: async (patch: ProfilePatch) => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      if (!user) throw new Error('Not signed in');
-      const { error } = await supabase.from('profiles').update(patch).eq('id', user.id);
-      if (error) throw error;
-    },
+    mutationFn: updateProfile,
     onSuccess: () => qc.invalidateQueries({ queryKey: ['profile'] }),
   });
 }
