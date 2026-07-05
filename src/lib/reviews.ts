@@ -1,5 +1,5 @@
+import { timeAgo } from './dates';
 import { type PlaceReview } from './places';
-import type { StoredPlaceReview, User } from './types';
 
 /**
  * A review as rendered in the place sheet. Extends the demo `PlaceReview` shape
@@ -9,6 +9,17 @@ import type { StoredPlaceReview, User } from './types';
 export interface DisplayReview extends PlaceReview {
   reviewId?: string;
   mine?: boolean;
+}
+
+/** A persisted review from any user, with the author profile resolved. */
+export interface CommunityReview {
+  id: string;
+  authorId: string;
+  authorName: string;
+  authorAvatar: string | null;
+  rating: number;
+  text: string;
+  createdAt: string;
 }
 
 const FULL_STAR = '★';
@@ -21,38 +32,42 @@ export function stars(rating: number): string {
 }
 
 /**
- * My reviews (newest first, flagged `mine` with their stored id) above the demo
- * community reviews. Author name/avatar resolve from the users map, falling back
- * to "You" if the author isn't found.
+ * Real community reviews (newest first, with relative timestamps; my own flagged
+ * `mine` and labelled "You" for edit/delete) above the demo community reviews.
  */
 export function mergeReviews(
-  mine: StoredPlaceReview[],
+  community: CommunityReview[],
   demo: PlaceReview[],
-  users: Record<string, User>,
+  myId: string | undefined,
 ): DisplayReview[] {
-  const mineDisplay: DisplayReview[] = [...mine].reverse().map((r) => ({
-    reviewId: r.id,
-    mine: true,
-    author: users[r.authorId]?.displayName ?? 'You',
-    avatarUrl: users[r.authorId]?.avatarUrl ?? '',
-    rating: r.rating,
-    text: r.text,
-    when: 'Just now',
-  }));
-  return [...mineDisplay, ...demo];
+  const real: DisplayReview[] = [...community]
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
+    .map((r) => {
+      const mine = r.authorId === myId;
+      return {
+        reviewId: r.id,
+        mine,
+        author: mine ? 'You' : r.authorName,
+        avatarUrl: r.authorAvatar ?? '',
+        rating: r.rating,
+        text: r.text,
+        when: timeAgo(r.createdAt),
+      };
+    });
+  return [...real, ...demo];
 }
 
 /**
- * Blend the demo aggregate rating with my own reviews for the headline number:
+ * Blend the demo aggregate rating with the real reviews for the headline number:
  * a count-weighted mean. With no reviews at all it's just the base rating.
  */
 export function blendedRating(
   base: number,
   demoCount: number,
-  mine: StoredPlaceReview[],
+  community: { rating: number }[],
 ): number {
-  const total = demoCount + mine.length;
+  const total = demoCount + community.length;
   if (total === 0) return base;
-  const mineSum = mine.reduce((sum, r) => sum + r.rating, 0);
-  return (base * demoCount + mineSum) / total;
+  const sum = community.reduce((acc, r) => acc + r.rating, 0);
+  return (base * demoCount + sum) / total;
 }

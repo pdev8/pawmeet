@@ -1,22 +1,18 @@
 import { describe, expect, it } from 'vitest';
 
 import { type PlaceReview } from './places';
-import { blendedRating, mergeReviews, stars } from './reviews';
-import type { StoredPlaceReview, User } from './types';
+import { blendedRating, mergeReviews, stars, type CommunityReview } from './reviews';
 
-const mkStored = (over: Partial<StoredPlaceReview> = {}): StoredPlaceReview => ({
+const mkReview = (over: Partial<CommunityReview> = {}): CommunityReview => ({
   id: 'r1',
-  placeId: 'p1',
   authorId: 'me',
+  authorName: 'Paul',
+  authorAvatar: 'http://a/me.png',
   rating: 5,
   text: 'Great',
   createdAt: '2026-01-01T00:00:00.000Z',
   ...over,
 });
-
-const users: Record<string, User> = {
-  me: { id: 'me', displayName: 'Paul', avatarUrl: 'http://a/me.png', homeArea: 'Austin' },
-};
 
 const demo: PlaceReview[] = [
   { author: 'Sam', avatarUrl: 'http://a/sam.png', rating: 4, text: 'nice', when: 'last week' },
@@ -41,26 +37,39 @@ describe('stars', () => {
 });
 
 describe('mergeReviews', () => {
-  it('lists my reviews first (newest first) and flags them for edit/delete', () => {
-    const mine = [mkStored({ id: 'r1', text: 'first' }), mkStored({ id: 'r2', text: 'second' })];
-    const out = mergeReviews(mine, demo, users);
+  it('lists real reviews first (newest first), demo reviews after', () => {
+    const community = [
+      mkReview({ id: 'r1', text: 'older', createdAt: '2026-01-01T00:00:00.000Z' }),
+      mkReview({ id: 'r2', text: 'newer', createdAt: '2026-02-01T00:00:00.000Z', authorId: 'sam', authorName: 'Sam' }),
+    ];
+    const out = mergeReviews(community, demo, 'me');
 
     expect(out).toHaveLength(3);
-    expect(out[0].reviewId).toBe('r2'); // most recently added shows first
-    expect(out[0].mine).toBe(true);
-    expect(out[0].author).toBe('Paul');
+    expect(out[0].reviewId).toBe('r2'); // newest real review first
     expect(out[2].author).toBe('Sam'); // demo review last
     expect(out[2].mine).toBeUndefined();
   });
 
-  it('falls back to "You" / blank avatar for an unknown author', () => {
-    const out = mergeReviews([mkStored({ authorId: 'ghost' })], [], users);
-    expect(out[0].author).toBe('You');
-    expect(out[0].avatarUrl).toBe('');
+  it('flags my own review as mine and labels it "You"', () => {
+    const [mine] = mergeReviews([mkReview({ authorId: 'me' })], [], 'me');
+    expect(mine.mine).toBe(true);
+    expect(mine.author).toBe('You');
   });
 
-  it('returns just the demo reviews when I have none', () => {
-    expect(mergeReviews([], demo, users)).toEqual(demo);
+  it('shows another user’s name and does not flag it mine', () => {
+    const [other] = mergeReviews([mkReview({ authorId: 'sam', authorName: 'Sam' })], [], 'me');
+    expect(other.mine).toBe(false);
+    expect(other.author).toBe('Sam');
+  });
+
+  it('uses a relative timestamp, not "Just now"', () => {
+    const [r] = mergeReviews([mkReview({ createdAt: '2026-01-01T00:00:00.000Z' })], [], 'me');
+    expect(r.when).not.toBe('Just now');
+    expect(typeof r.when).toBe('string');
+  });
+
+  it('returns just the demo reviews when there are no real ones', () => {
+    expect(mergeReviews([], demo, 'me')).toEqual(demo);
   });
 });
 
@@ -73,12 +82,12 @@ describe('blendedRating', () => {
     expect(blendedRating(4.0, 3, [])).toBe(4.0);
   });
 
-  it('count-weights the demo aggregate with my reviews', () => {
-    // (4.0 * 2 demo + one 5-star of mine) / 3 = 13/3
-    expect(blendedRating(4.0, 2, [mkStored({ rating: 5 })])).toBeCloseTo(13 / 3);
+  it('count-weights the demo aggregate with the real reviews', () => {
+    // (4.0 * 2 demo + one 5-star real) / 3 = 13/3
+    expect(blendedRating(4.0, 2, [mkReview({ rating: 5 })])).toBeCloseTo(13 / 3);
   });
 
-  it('averages my reviews alone when there are no demo reviews', () => {
-    expect(blendedRating(4.0, 0, [mkStored({ rating: 2 }), mkStored({ rating: 4 })])).toBe(3);
+  it('averages the real reviews alone when there are no demo reviews', () => {
+    expect(blendedRating(4.0, 0, [mkReview({ rating: 2 }), mkReview({ rating: 4 })])).toBe(3);
   });
 });
