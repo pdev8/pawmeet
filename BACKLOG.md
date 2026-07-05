@@ -102,7 +102,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 
 ## EPIC 11 — Trust, Safety & Moderation  🟢 (launch-critical for a UGC app)
 - [~] Report event / user / comment  🚫 (UGC apps need report or Apple rejects) — event + comment reporting shipped (#20, insert-own RLS); user reporting needs a profile view; admin queue is the operator half
-- [ ] Block user (mutual hide of events, RSVPs, comments)  🚫
+- [x] Block user (mutual hide of events, RSVPs, comments)  🚫 — `blocks` table + mutual-hide across discovery/comments/attendees; block from a comment, unblock from Profile (#25)
 - [x] Simple admin moderation-queue web view + a process/owner for reviewing reports — `admins` allowlist + `is_admin` RLS + Moderation panel (resolve/dismiss) in `admin/` (#21); grant admins via SQL insert
 - [x] Age gate (17+) + community guidelines text on events  🚫 — one-time 17+ gate + guidelines screen (Profile + every event) (#23)
 
