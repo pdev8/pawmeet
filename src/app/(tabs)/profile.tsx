@@ -2,6 +2,7 @@ import { Image } from 'expo-image';
 import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   LayoutAnimation,
   Modal,
@@ -24,6 +25,7 @@ import { usePalette } from '@/hooks/use-palette';
 import { deleteAccount, signOut } from '@/lib/auth';
 import { BREEDS } from '@/lib/breeds';
 import { useBlockActions, useBlockedList } from '@/lib/use-blocks';
+import { pickImage, uploadPublicImage } from '@/lib/storage';
 import { useAddPet, useMyPets, useUpdatePet } from '@/lib/use-pets';
 import { useProfile, useUpdateProfile } from '@/lib/use-profile';
 import {
@@ -41,6 +43,7 @@ interface PetForm {
   name: string;
   breed: string;
   size: PetSize;
+  photoUrl?: string;
 }
 
 // LayoutAnimation needs a one-time opt-in on Android; a no-op on iOS.
@@ -101,6 +104,21 @@ export default function ProfileScreen() {
   const [editingName, setEditingName] = useState(false);
   const [nameDraft, setNameDraft] = useState('');
   const [petForm, setPetForm] = useState<PetForm | null>(null);
+  const [uploadingPhoto, setUploadingPhoto] = useState(false);
+
+  const pickPetPhoto = async () => {
+    const uri = await pickImage();
+    if (!uri) return;
+    setUploadingPhoto(true);
+    try {
+      const url = await uploadPublicImage('pets', uri);
+      setPetForm((f) => (f ? { ...f, photoUrl: url } : f));
+    } catch (e) {
+      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setUploadingPhoto(false);
+    }
+  };
   const [collapsed, setCollapsed] = useState<Record<string, boolean>>({});
   const toggleSection = (key: string) => {
     LayoutAnimation.configureNext(LayoutAnimation.Presets.easeInEaseOut);
@@ -138,10 +156,10 @@ export default function ProfileScreen() {
     if (petForm.petId) {
       updatePet.mutate({
         id: petForm.petId,
-        patch: { name, breed: petForm.breed, size: petForm.size },
+        patch: { name, breed: petForm.breed, size: petForm.size, photoUrl: petForm.photoUrl },
       });
     } else {
-      addPet.mutate({ name, breed: petForm.breed, size: petForm.size });
+      addPet.mutate({ name, breed: petForm.breed, size: petForm.size, photoUrl: petForm.photoUrl });
     }
     setPetForm(null);
   };
@@ -205,7 +223,7 @@ export default function ProfileScreen() {
             <Pressable
               key={pet.id}
               onPress={() =>
-                setPetForm({ petId: pet.id, name: pet.name, breed: pet.breed, size: pet.size })
+                setPetForm({ petId: pet.id, name: pet.name, breed: pet.breed, size: pet.size, photoUrl: pet.photoUrl })
               }
               style={[styles.petRow, { backgroundColor: p.card, borderColor: p.separator }]}>
               <Image source={{ uri: pet.photoUrl }} style={styles.petPhoto} />
@@ -417,6 +435,20 @@ export default function ProfileScreen() {
             <Text style={[styles.modalTitle, { color: p.text }]}>
               {petForm?.petId ? 'Edit pet' : 'Add a pet'}
             </Text>
+            <Pressable
+              onPress={pickPetPhoto}
+              disabled={uploadingPhoto}
+              accessibilityRole="button"
+              accessibilityLabel="Choose pet photo"
+              style={[styles.petPhotoPick, { borderColor: p.separator }]}>
+              {uploadingPhoto ? (
+                <ActivityIndicator color={p.accent} />
+              ) : petForm?.photoUrl ? (
+                <Image source={{ uri: petForm.photoUrl }} style={styles.petPhotoPreview} />
+              ) : (
+                <Text style={{ color: p.accent, fontWeight: '700', fontSize: 13 }}>Add photo</Text>
+              )}
+            </Pressable>
             <TextInput
               value={petForm?.name ?? ''}
               onChangeText={(t) => setPetForm((f) => (f ? { ...f, name: t } : f))}
@@ -505,6 +537,17 @@ const styles = StyleSheet.create({
     gap: Spacing.two,
   },
   blockedName: { flex: 1, fontSize: 15, fontWeight: '600' },
+  petPhotoPick: {
+    alignSelf: 'center',
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: StyleSheet.hairlineWidth,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  petPhotoPreview: { width: 84, height: 84 },
   buildNote: { fontSize: 11, textAlign: 'center' },
   scrim: {
     flex: 1,
