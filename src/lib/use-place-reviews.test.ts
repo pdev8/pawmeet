@@ -9,6 +9,7 @@ import {
   addPlaceReview,
   deletePlaceReview,
   fetchMyPlaceReviews,
+  fetchPlaceReviews,
   updatePlaceReview,
 } from './use-place-reviews';
 
@@ -19,6 +20,60 @@ const from = supabase.from as any;
 
 beforeEach(() => {
   vi.clearAllMocks();
+});
+
+describe('fetchPlaceReviews', () => {
+  it('returns [] without querying for a missing place id', async () => {
+    expect(await fetchPlaceReviews('')).toEqual([]);
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it('maps all reviews for a place with the embedded author profile', async () => {
+    const order = vi.fn().mockResolvedValue({
+      data: [
+        {
+          id: 'r1',
+          author_id: 'u1',
+          rating: 5,
+          body: 'Great park',
+          created_at: '2026-02-01T00:00:00Z',
+          author: { display_name: 'Sam', avatar_url: 'a.png' },
+        },
+      ],
+      error: null,
+    });
+    const eq = vi.fn(() => ({ order }));
+    from.mockReturnValue({ select: vi.fn(() => ({ eq })) });
+
+    const out = await fetchPlaceReviews('p1');
+
+    expect(from).toHaveBeenCalledWith('place_reviews');
+    expect(eq).toHaveBeenCalledWith('place_id', 'p1');
+    expect(out).toEqual([
+      {
+        id: 'r1',
+        authorId: 'u1',
+        authorName: 'Sam',
+        authorAvatar: 'a.png',
+        rating: 5,
+        text: 'Great park',
+        createdAt: '2026-02-01T00:00:00Z',
+      },
+    ]);
+  });
+
+  it('falls back to "Someone" when the author profile is missing', async () => {
+    const order = vi.fn().mockResolvedValue({
+      data: [
+        { id: 'r1', author_id: 'u1', rating: 3, body: 'ok', created_at: '2026-01-01T00:00:00Z', author: null },
+      ],
+      error: null,
+    });
+    from.mockReturnValue({ select: vi.fn(() => ({ eq: vi.fn(() => ({ order })) })) });
+    const [r] = await fetchPlaceReviews('p1');
+    expect(r.authorName).toBe('Someone');
+    expect(r.authorAvatar).toBeNull();
+  });
 });
 
 describe('fetchMyPlaceReviews', () => {

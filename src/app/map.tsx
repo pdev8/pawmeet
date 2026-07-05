@@ -37,10 +37,11 @@ import {
 import {
   useAddPlaceReview,
   useDeletePlaceReview,
-  useMyPlaceReviews,
+  usePlaceReviews,
   useUpdatePlaceReview,
 } from '@/lib/use-place-reviews';
 import { blendedRating, mergeReviews, stars } from '@/lib/reviews';
+import { useCurrentUserId } from '@/lib/use-rsvps';
 import { useStore } from '@/lib/store';
 
 // One distinct hue per category so a filter chip visually matches the areas it
@@ -186,13 +187,15 @@ export default function MapScreen() {
   // The headline rating blends both so a place reacts to what I leave.
   // My reviews (newest first, flagged for edit/delete) above the demo community
   // reviews; the headline rating blends both. See src/lib/reviews.ts.
-  const { data: myReviews = [] } = useMyPlaceReviews(selected?.id);
+  const { data: community = [] } = usePlaceReviews(selected?.id);
+  const { data: myId } = useCurrentUserId();
   const addReview = useAddPlaceReview();
   const updateReview = useUpdatePlaceReview();
   const deleteReviewMut = useDeletePlaceReview();
   const demoList = selected ? demoReviews(selected, reviewers) : [];
-  const reviews = selected ? mergeReviews(myReviews, demoList, store.users) : [];
-  const rating = selected ? blendedRating(placeRating(selected), demoList.length, myReviews) : 0;
+  const reviews = selected ? mergeReviews(community, demoList, myId) : [];
+  const rating = selected ? blendedRating(placeRating(selected), demoList.length, community) : 0;
+  const reviewCount = demoList.length + community.length;
 
   const canReview = myRating >= 1 && myText.trim().length > 0;
 
@@ -214,7 +217,7 @@ export default function MapScreen() {
   };
 
   const editReview = (reviewId: string) => {
-    const r = myReviews.find((x) => x.id === reviewId);
+    const r = community.find((x) => x.id === reviewId);
     if (!r) return;
     setEditingId(reviewId);
     setMyRating(r.rating);
@@ -371,6 +374,12 @@ export default function MapScreen() {
                   <Text style={{ color: p.accent }}>
                     {stars(rating)} {rating.toFixed(1)}
                   </Text>
+                  {reviewCount > 0 ? (
+                    <Text style={{ color: p.textSecondary }}>
+                      {'  ·  '}
+                      {reviewCount} {reviewCount === 1 ? 'review' : 'reviews'}
+                    </Text>
+                  ) : null}
                 </Text>
               </View>
               <Pressable onPress={() => setSelected(null)} accessibilityLabel="Close details">

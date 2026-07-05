@@ -1,5 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
+import type { CommunityReview } from './reviews';
 import { supabase } from './supabase';
 import type { StoredPlaceReview } from './types';
 
@@ -39,6 +40,35 @@ export async function fetchMyPlaceReviews(placeId: string): Promise<StoredPlaceR
   return (data as DbReview[]).map(toReview);
 }
 
+interface DbCommunityReview {
+  id: string;
+  author_id: string;
+  rating: number;
+  body: string;
+  created_at: string;
+  author: { display_name: string; avatar_url: string | null } | null;
+}
+
+/** Everyone's reviews for a place (author profile embedded), for the community list. */
+export async function fetchPlaceReviews(placeId: string): Promise<CommunityReview[]> {
+  if (!placeId) return [];
+  const { data, error } = await supabase
+    .from('place_reviews')
+    .select('id, author_id, rating, body, created_at, author:profiles(display_name, avatar_url)')
+    .eq('place_id', placeId)
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data as unknown as DbCommunityReview[]).map((r) => ({
+    id: r.id,
+    authorId: r.author_id,
+    authorName: r.author?.display_name ?? 'Someone',
+    authorAvatar: r.author?.avatar_url ?? null,
+    rating: r.rating,
+    text: r.body,
+    createdAt: r.created_at,
+  }));
+}
+
 export async function addPlaceReview(placeId: string, rating: number, text: string): Promise<void> {
   const body = text.trim();
   if (!placeId || rating < 1 || !body) return;
@@ -66,8 +96,17 @@ export async function deletePlaceReview(id: string): Promise<void> {
 
 export function useMyPlaceReviews(placeId: string | undefined) {
   return useQuery({
-    queryKey: ['place-reviews', placeId],
+    queryKey: ['place-reviews', 'mine', placeId],
     queryFn: () => fetchMyPlaceReviews(placeId as string),
+    enabled: !!placeId,
+  });
+}
+
+/** All reviews for a place (community view). */
+export function usePlaceReviews(placeId: string | undefined) {
+  return useQuery({
+    queryKey: ['place-reviews', 'all', placeId],
+    queryFn: () => fetchPlaceReviews(placeId as string),
     enabled: !!placeId,
   });
 }
