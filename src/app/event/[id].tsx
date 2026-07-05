@@ -34,6 +34,12 @@ import {
   visibleAddress,
 } from '@/lib/selectors';
 import { useEvent } from '@/lib/use-events';
+import {
+  goingCountOf,
+  useCurrentUserId,
+  useEventRsvps,
+  useRsvpActions,
+} from '@/lib/use-rsvps';
 import { useStore } from '@/lib/store';
 import {
   RECURRENCE_LABELS,
@@ -78,6 +84,97 @@ function AttendeeStrip({
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+// RSVP bar for real (Supabase) events — mirrors RsvpBar's states using live
+// data. Host approve/decline still happens via the (mock) Inbox for now.
+function SupabaseRsvpBar({ event }: { event: PetEvent }) {
+  const p = usePalette();
+  const insets = useSafeAreaInsets();
+  const { data: uid } = useCurrentUserId();
+  const { data: rsvps = [] } = useEventRsvps(event.id);
+  const actions = useRsvpActions(event.id);
+  const pad = { paddingBottom: Math.max(insets.bottom, Spacing.three) };
+
+  if (event.status !== 'active') return null;
+
+  const host = event.hostId === uid;
+  const mine = rsvps.find(
+    (r) => r.userId === uid && r.status !== 'cancelled' && r.status !== 'declined_by_host',
+  );
+  const goingCount = goingCountOf(rsvps);
+  const left = event.capacity != null ? Math.max(0, event.capacity - goingCount) : null;
+  const isFull = left !== null && left <= 0;
+  const needsApproval = event.rsvpMode === 'host_approves';
+  const join = () =>
+    needsApproval && !isFull
+      ? actions.requestJoin.mutate()
+      : actions.go.mutate({ capacity: event.capacity, goingCount });
+
+  if (host) {
+    return (
+      <Glass style={[styles.rsvpBar, pad]}>
+        <View style={styles.hostBarText}>
+          <Text style={[styles.rsvpState, { color: p.text }]}>You&apos;re hosting</Text>
+        </View>
+      </Glass>
+    );
+  }
+
+  if (mine?.status === 'going' || mine?.status === 'interested') {
+    return (
+      <Glass style={[styles.rsvpBar, pad]}>
+        <View style={styles.hostBarText}>
+          <Text style={[styles.rsvpState, { color: p.success }]}>
+            {mine.status === 'going' ? "You're going ✓" : "You're interested"}
+          </Text>
+        </View>
+        {mine.status === 'interested' ? <Chip label="Go" selected onPress={join} /> : null}
+        <Chip label="Cancel" onPress={() => actions.cancel.mutate()} />
+      </Glass>
+    );
+  }
+
+  if (mine?.status === 'pending_approval') {
+    return (
+      <Glass style={[styles.rsvpBar, pad]}>
+        <View style={styles.hostBarText}>
+          <Text style={[styles.rsvpState, { color: p.accent }]}>Request sent</Text>
+          <Text style={[styles.rsvpSub, { color: p.textSecondary }]}>Waiting for the host</Text>
+        </View>
+        <Chip label="Withdraw" onPress={() => actions.cancel.mutate()} />
+      </Glass>
+    );
+  }
+
+  if (mine?.status === 'waitlisted') {
+    return (
+      <Glass style={[styles.rsvpBar, pad]}>
+        <View style={styles.hostBarText}>
+          <Text style={[styles.rsvpState, { color: p.accent }]}>You&apos;re on the waitlist</Text>
+        </View>
+        <Chip label="Leave" onPress={() => actions.cancel.mutate()} />
+      </Glass>
+    );
+  }
+
+  return (
+    <Glass style={[styles.rsvpBar, pad]}>
+      <Chip
+        label={isFull ? 'Join waitlist' : needsApproval ? 'Request to join' : 'Going'}
+        sf={isFull ? 'clock.fill' : 'checkmark.circle.fill'}
+        selected
+        style={styles.rsvpBtn}
+        onPress={join}
+      />
+      <Chip
+        label="Interested"
+        sf="star"
+        style={styles.rsvpBtn}
+        onPress={() => actions.interested.mutate()}
+      />
+    </Glass>
   );
 }
 
@@ -382,7 +479,7 @@ export default function EventScreen() {
           </View>
         </ScrollView>
 
-        <RsvpBar event={event} />
+        {sbEvent ? <SupabaseRsvpBar event={event} /> : <RsvpBar event={event} />}
       </KeyboardAvoidingView>
 
       <Pressable
