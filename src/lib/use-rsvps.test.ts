@@ -8,8 +8,10 @@ import { supabase } from './supabase';
 import {
   cancelMyRsvp,
   fetchEventRsvps,
+  fetchGoingCounts,
   goingCountOf,
   resolveGoingStatus,
+  tallyGoing,
   type EventRsvp,
 } from './use-rsvps';
 
@@ -49,16 +51,72 @@ describe('goingCountOf', () => {
 });
 
 describe('fetchEventRsvps', () => {
-  it('maps rows to the app shape', async () => {
+  it('maps rows (incl. embedded profile) to the app shape', async () => {
     const eq = vi.fn().mockResolvedValue({
-      data: [{ id: 'r1', user_id: 'u1', status: 'going' }],
+      data: [
+        {
+          id: 'r1',
+          user_id: 'u1',
+          status: 'going',
+          profiles: { display_name: 'Sam', avatar_url: 'a.png' },
+        },
+      ],
       error: null,
     });
     from.mockReturnValue({ select: vi.fn(() => ({ eq })) });
     const out = await fetchEventRsvps('e1');
     expect(from).toHaveBeenCalledWith('rsvps');
     expect(eq).toHaveBeenCalledWith('event_id', 'e1');
-    expect(out).toEqual([{ id: 'r1', userId: 'u1', status: 'going' }]);
+    expect(out).toEqual([
+      { id: 'r1', userId: 'u1', status: 'going', name: 'Sam', avatar: 'a.png' },
+    ]);
+  });
+
+  it('tolerates a missing profile', async () => {
+    const eq = vi.fn().mockResolvedValue({
+      data: [{ id: 'r1', user_id: 'u1', status: 'interested', profiles: null }],
+      error: null,
+    });
+    from.mockReturnValue({ select: vi.fn(() => ({ eq })) });
+    const [r] = await fetchEventRsvps('e1');
+    expect(r.name).toBeUndefined();
+    expect(r.avatar).toBeNull();
+  });
+});
+
+describe('tallyGoing', () => {
+  it('counts going RSVPs per event, ignoring other statuses', () => {
+    expect(
+      tallyGoing([
+        { event_id: 'a', status: 'going' },
+        { event_id: 'a', status: 'going' },
+        { event_id: 'a', status: 'interested' },
+        { event_id: 'b', status: 'going' },
+      ]),
+    ).toEqual({ a: 2, b: 1 });
+  });
+});
+
+describe('fetchGoingCounts', () => {
+  it('short-circuits on an empty id list without querying', async () => {
+    expect(await fetchGoingCounts([])).toEqual({});
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it('queries going RSVPs for the given events and tallies them', async () => {
+    const eq = vi.fn().mockResolvedValue({
+      data: [
+        { event_id: 'e1', status: 'going' },
+        { event_id: 'e1', status: 'going' },
+      ],
+      error: null,
+    });
+    const inFn = vi.fn(() => ({ eq }));
+    from.mockReturnValue({ select: vi.fn(() => ({ in: inFn })) });
+    const out = await fetchGoingCounts(['e1', 'e2']);
+    expect(inFn).toHaveBeenCalledWith('event_id', ['e1', 'e2']);
+    expect(eq).toHaveBeenCalledWith('status', 'going');
+    expect(out).toEqual({ e1: 2 });
   });
 });
 

@@ -39,6 +39,7 @@ import {
   useCurrentUserId,
   useEventRsvps,
   useRsvpActions,
+  type EventRsvp,
 } from '@/lib/use-rsvps';
 import { useStore } from '@/lib/store';
 import {
@@ -79,6 +80,49 @@ function AttendeeStrip({
                   {user.displayName.split(' ')[0]}
                 </Text>
               </Pressable>
+            );
+          })}
+        </View>
+      </ScrollView>
+    </View>
+  );
+}
+
+// Attendee strip for real (Supabase) events. Builds badges from the RSVP rows'
+// embedded profiles; the pet peek + tap-to-profile are mock-only for now.
+function SupabaseAttendeeStrip({
+  title,
+  rsvps,
+  status,
+}: {
+  title: string;
+  rsvps: EventRsvp[];
+  status: 'going' | 'interested';
+}) {
+  const p = usePalette();
+  const rows = rsvps.filter((r) => r.status === status);
+  if (rows.length === 0) return null;
+  return (
+    <View style={{ gap: Spacing.two }}>
+      <Text style={[styles.sectionLabel, { color: p.textSecondary }]}>
+        {title.toUpperCase()} ({rows.length})
+      </Text>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={styles.strip}>
+          {rows.map((r) => {
+            const user: User = {
+              id: r.userId,
+              displayName: r.name ?? 'Someone',
+              avatarUrl: r.avatar ?? '',
+              homeArea: '',
+            };
+            return (
+              <View key={r.id} style={styles.stripItem}>
+                <OwnerPetBadge user={user} size={48} />
+                <Text style={[styles.stripName, { color: p.textSecondary }]} numberOfLines={1}>
+                  {user.displayName.split(' ')[0]}
+                </Text>
+              </View>
             );
           })}
         </View>
@@ -340,6 +384,7 @@ export default function EventScreen() {
   // Read the event from Supabase, falling back to the mock store for the seed
   // events still shown on Profile during the data-layer migration.
   const { data: sbEvent } = useEvent(id);
+  const { data: sbRsvps = [] } = useEventRsvps(id);
   const event = sbEvent ?? (id ? store.events[id] : undefined);
   if (!event) {
     return (
@@ -472,8 +517,17 @@ export default function EventScreen() {
 
             <Text style={[styles.description, { color: p.text }]}>{event.description}</Text>
 
-            <AttendeeStrip title="Going" userIds={going} onTapUser={setProfileUser} />
-            <AttendeeStrip title="Interested" userIds={interested} onTapUser={setProfileUser} />
+            {sbEvent ? (
+              <>
+                <SupabaseAttendeeStrip title="Going" rsvps={sbRsvps} status="going" />
+                <SupabaseAttendeeStrip title="Interested" rsvps={sbRsvps} status="interested" />
+              </>
+            ) : (
+              <>
+                <AttendeeStrip title="Going" userIds={going} onTapUser={setProfileUser} />
+                <AttendeeStrip title="Interested" userIds={interested} onTapUser={setProfileUser} />
+              </>
+            )}
 
             {sbEvent ? (
               <SupabaseCommentsSection event={event} />

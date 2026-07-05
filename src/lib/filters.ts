@@ -117,13 +117,15 @@ export function discoverEvents(
 
 /**
  * Rank a plain list of events for discovery — used for Supabase-sourced events.
- * Same windows/radius/breed/venue rules as discoverEvents; goingCount is 0 until
- * RSVPs are migrated off the mock store, so "popular" sort is a no-op for now.
+ * Same windows/radius/breed/venue rules as discoverEvents. `goingCounts` maps
+ * event id → going RSVP count (defaults to empty, i.e. 0 each) and drives the
+ * "has spots" filter, the "popular" sort, and the card's going badge.
  */
 export function rankDiscoverEvents(
   events: PetEvent[],
   center: LatLng,
   f: Filters,
+  goingCounts: Record<string, number> = {},
 ): DiscoveryItem[] {
   const now = Date.now();
   const end = windowEnd(f.dateWindow).getTime();
@@ -137,15 +139,17 @@ export function rankDiscoverEvents(
     if (dist > f.radiusMi) continue;
     if (f.breed && ev.breedFocus && ev.breedFocus !== f.breed) continue;
     if (f.venues.length > 0 && !f.venues.includes(ev.venueType)) continue;
-    // No RSVPs yet, so a positive capacity always has spots.
-    if (f.hasSpots && ev.capacity != null && ev.capacity <= 0) continue;
-    items.push({ event: ev, distanceMi: dist, goingCount: 0 });
+    const goingCount = goingCounts[ev.id] ?? 0;
+    if (f.hasSpots && ev.capacity != null && ev.capacity - goingCount <= 0) continue;
+    items.push({ event: ev, distanceMi: dist, goingCount });
   }
 
   items.sort((a, b) => {
     switch (f.sort) {
       case 'nearest':
         return a.distanceMi - b.distanceMi;
+      case 'popular':
+        return b.goingCount - a.goingCount;
       default:
         return a.event.startsAt.localeCompare(b.event.startsAt);
     }
