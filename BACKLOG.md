@@ -53,12 +53,12 @@ email/password is a placeholder for SSO. Milestone mapping lives in [SPEC.md §9
 - [x] Scheduled archival job — `archive_past_events()` scheduled hourly via pg_cron (#19, applied to the linked project)
 
 ## EPIC 2 — Map & Places  🟢
-- [ ] Persist filter selections across sessions
+- [x] Persist filter selections across sessions — category + Events toggles persist via the store (#35)
 - [ ] Cluster pins when zoomed out (many places overlap)
 - [ ] Cache Overpass results so re-opening the map isn't a cold fetch
 - [ ] Loading / empty / error states polish for "search this area"
 - [x] Show event pins on the map (tie Discover events → map) — accent paw pins + Events toggle (#34); pins follow the Discover area, region refetch is a follow-up
-- [ ] Legend / key for the category colors
+- [x] Legend / key for the category colors — floating key button → legend card (#35)
 
 ## EPIC 3 — Place Reviews (extend what's built)  🟢 ⭐
 - [x] Persist reviews to backend — community reviews (all users) via `place_reviews`, author profiles embedded (#26)
