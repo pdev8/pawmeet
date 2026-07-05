@@ -80,8 +80,12 @@ export default function MapScreen() {
   const [places, setPlaces] = useState<DogPlace[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [enabled, setEnabled] = useState<Set<PlaceCategory>>(new Set(ALL_CATEGORIES));
-  const [showEvents, setShowEvents] = useState(true);
+  // Filter selections persist across sessions (store), initialised on mount.
+  const [enabled, setEnabled] = useState<Set<PlaceCategory>>(
+    () => new Set(useStore.getState().mapCategories as PlaceCategory[]),
+  );
+  const [showEvents, setShowEvents] = useState(() => useStore.getState().mapShowEvents);
+  const [legendOpen, setLegendOpen] = useState(false);
   // Upcoming events near the area, shown as pins (wide radius so the map is well populated).
   const eventFilters = useMemo(() => ({ ...DEFAULT_FILTERS, radiusMi: 50 }), []);
   const { data: eventItems = [] } = useDiscoverEvents(store.center, eventFilters);
@@ -186,7 +190,14 @@ export default function MapScreen() {
       const next = new Set(prev);
       if (next.has(c)) next.delete(c);
       else next.add(c);
+      store.setMapCategories([...next]);
       return next;
+    });
+
+  const toggleEvents = () =>
+    setShowEvents((v) => {
+      store.setMapShowEvents(!v);
+      return !v;
     });
 
   // My own reviews (persisted) show first, then the demo community reviews.
@@ -352,7 +363,7 @@ export default function MapScreen() {
           keyboardShouldPersistTaps="handled"
           contentContainerStyle={styles.chipsRow}>
           <Pressable
-            onPress={() => setShowEvents((v) => !v)}
+            onPress={toggleEvents}
             accessibilityRole="button"
             accessibilityState={{ selected: showEvents }}
             style={({ pressed }) => [
@@ -594,6 +605,33 @@ export default function MapScreen() {
           Map data © OpenStreetMap contributors
         </Text>
       </KeyboardAvoidingView>
+
+      {!selected ? (
+        <View style={[styles.legendWrap, { bottom: Math.max(insets.bottom, 12) }]} pointerEvents="box-none">
+          {legendOpen ? (
+            <Glass style={styles.legendCard}>
+              {ALL_CATEGORIES.map((c) => (
+                <View key={c} style={styles.legendRow}>
+                  <View style={[styles.legendDot, { backgroundColor: CATEGORY_COLORS[c].stroke }]} />
+                  <Text style={[styles.legendText, { color: p.text }]}>{CATEGORY_LABELS[c]}</Text>
+                </View>
+              ))}
+              <View style={styles.legendRow}>
+                <View style={[styles.legendDot, { backgroundColor: p.accent }]} />
+                <Text style={[styles.legendText, { color: p.text }]}>Events</Text>
+              </View>
+            </Glass>
+          ) : null}
+          <Pressable
+            onPress={() => setLegendOpen((v) => !v)}
+            accessibilityRole="button"
+            accessibilityLabel={legendOpen ? 'Hide map key' : 'Show map key'}>
+            <Glass style={styles.legendBtn}>
+              <Icon sf={legendOpen ? 'xmark' : 'list.bullet'} size={16} color={p.text} />
+            </Glass>
+          </Pressable>
+        </View>
+      ) : null}
     </View>
   );
 }
@@ -650,6 +688,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.25,
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 1 },
+  },
+  legendWrap: { position: 'absolute', left: Spacing.three, alignItems: 'flex-start', gap: 8 },
+  legendCard: { borderRadius: Radii.md, padding: Spacing.two, gap: 6, overflow: 'hidden' },
+  legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
+  legendDot: { width: 12, height: 12, borderRadius: 6 },
+  legendText: { fontSize: 13, fontWeight: '600' },
+  legendBtn: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
   },
   bottomBar: {
     position: 'absolute',
