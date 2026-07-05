@@ -3,6 +3,7 @@ import { Image } from 'expo-image';
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   KeyboardAvoidingView,
   Platform,
@@ -23,6 +24,7 @@ import { usePalette } from '@/hooks/use-palette';
 import { BREEDS } from '@/lib/breeds';
 import { at } from '@/lib/dates';
 import { offsetMi } from '@/lib/geo';
+import { pickImage, uploadPublicImage } from '@/lib/storage';
 import { useCreateEvent } from '@/lib/use-events';
 import { useStore } from '@/lib/store';
 import {
@@ -79,6 +81,21 @@ export default function PostScreen() {
   const createEvent = useCreateEvent();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(freshForm);
+  const [uploadingCover, setUploadingCover] = useState(false);
+
+  const pickCover = async () => {
+    const uri = await pickImage();
+    if (!uri) return;
+    setUploadingCover(true);
+    try {
+      const url = await uploadPublicImage('events', uri);
+      setForm((f) => ({ ...f, coverPhotoUrl: url }));
+    } catch (e) {
+      Alert.alert('Upload failed', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setUploadingCover(false);
+    }
+  };
 
   // "Host it again" hands a prefilled draft through the store.
   useFocusEffect(
@@ -231,6 +248,27 @@ export default function PostScreen() {
               <Text style={[styles.label, { color: p.textSecondary }]}>COVER PHOTO</Text>
               <ScrollView horizontal showsHorizontalScrollIndicator={false}>
                 <View style={styles.coverRow}>
+                  <Pressable
+                    onPress={pickCover}
+                    disabled={uploadingCover}
+                    accessibilityRole="button"
+                    accessibilityLabel="Upload a cover photo"
+                    style={[styles.coverOption, styles.coverUpload, { borderColor: p.separator }]}>
+                    {uploadingCover ? (
+                      <ActivityIndicator color={p.accent} />
+                    ) : (
+                      <>
+                        <Icon sf="photo.badge.plus" size={22} color={p.accent} />
+                        <Text style={[styles.coverUploadText, { color: p.accent }]}>Upload</Text>
+                      </>
+                    )}
+                  </Pressable>
+                  {!COVER_OPTIONS.includes(form.coverPhotoUrl) ? (
+                    <Image
+                      source={{ uri: form.coverPhotoUrl }}
+                      style={[styles.coverOption, { borderColor: p.accent, borderWidth: 3 }]}
+                    />
+                  ) : null}
                   {COVER_OPTIONS.map((uri) => (
                     <Pressable key={uri} onPress={() => upd({ coverPhotoUrl: uri })}>
                       <Image
@@ -467,6 +505,14 @@ const styles = StyleSheet.create({
   },
   coverRow: { flexDirection: 'row', gap: Spacing.two },
   coverOption: { width: 140, height: 88, borderRadius: Radii.md },
+  coverUpload: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderStyle: 'dashed',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 4,
+  },
+  coverUploadText: { fontSize: 12, fontWeight: '700' },
   pickerWrap: { alignItems: 'flex-start' },
   wrapRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   note: {
