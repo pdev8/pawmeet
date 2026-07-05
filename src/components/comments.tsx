@@ -19,6 +19,7 @@ import {
   useEventComments,
   type DisplayComment,
 } from '@/lib/use-comments';
+import { useReportContent } from '@/lib/use-reports';
 import { useCurrentUserId, useEventRsvps } from '@/lib/use-rsvps';
 import type { EventComment, PetEvent, User } from '@/lib/types';
 
@@ -252,6 +253,7 @@ function SupabaseCommentRow({
   onReply,
   onEdit,
   onDelete,
+  onReport,
 }: {
   comment: DisplayComment;
   event: PetEvent;
@@ -262,6 +264,7 @@ function SupabaseCommentRow({
   onReply: (c: DisplayComment) => void;
   onEdit: (id: string, body: string) => void;
   onDelete: (id: string, by: 'author' | 'host') => void;
+  onReport: (id: string) => void;
 }) {
   const p = usePalette();
   const [editing, setEditing] = useState(false);
@@ -377,6 +380,11 @@ function SupabaseCommentRow({
                 <Text style={[styles.action, { color: p.danger }]}>Remove</Text>
               </Pressable>
             ) : null}
+            {!isMine && !iAmHost ? (
+              <Pressable onPress={() => onReport(comment.id)}>
+                <Text style={[styles.action, { color: p.textSecondary }]}>Report</Text>
+              </Pressable>
+            ) : null}
           </View>
         ) : null}
       </View>
@@ -393,6 +401,25 @@ export function SupabaseCommentsSection({ event }: { event: PetEvent }) {
   const { data: myId } = useCurrentUserId();
   const { data: rsvps = [] } = useEventRsvps(event.id);
   const actions = useCommentActions(event.id);
+  const report = useReportContent();
+
+  const onReport = (commentId: string) =>
+    Alert.alert('Report this comment?', 'Our team will review it.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Report',
+        style: 'destructive',
+        onPress: () =>
+          report.mutate(
+            { targetType: 'comment', targetId: commentId },
+            {
+              onSuccess: () =>
+                Alert.alert('Thanks for the report', 'We’ll take a look at this comment.'),
+              onError: (e) => Alert.alert('Could not report', (e as Error).message),
+            },
+          ),
+      },
+    ]);
 
   const goingIds = new Set(rsvps.filter((r) => r.status === 'going').map((r) => r.userId));
 
@@ -477,6 +504,7 @@ export function SupabaseCommentsSection({ event }: { event: PetEvent }) {
             onReply={setReplyTo}
             onEdit={(id, body) => actions.edit.mutate({ id, body })}
             onDelete={(id, by) => actions.remove.mutate({ id, by })}
+            onReport={onReport}
           />
           {repliesFor(c.id).map((r) => (
             <SupabaseCommentRow
@@ -490,6 +518,7 @@ export function SupabaseCommentsSection({ event }: { event: PetEvent }) {
               onReply={setReplyTo}
               onEdit={(id, body) => actions.edit.mutate({ id, body })}
               onDelete={(id, by) => actions.remove.mutate({ id, by })}
+              onReport={onReport}
             />
           ))}
         </View>

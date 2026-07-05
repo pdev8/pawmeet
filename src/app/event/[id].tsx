@@ -34,6 +34,7 @@ import {
   visibleAddress,
 } from '@/lib/selectors';
 import { useEvent } from '@/lib/use-events';
+import { useReportContent } from '@/lib/use-reports';
 import {
   goingCountOf,
   useCurrentUserId,
@@ -128,6 +129,38 @@ function SupabaseAttendeeStrip({
         </View>
       </ScrollView>
     </View>
+  );
+}
+
+// "Report this event" link for real events you don't host.
+function SupabaseReportEvent({ event }: { event: PetEvent }) {
+  const p = usePalette();
+  const { data: myId } = useCurrentUserId();
+  const report = useReportContent();
+  if (!myId || event.hostId === myId) return null;
+  const onPress = () =>
+    Alert.alert('Report this event?', 'Our team will review it.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Report',
+        style: 'destructive',
+        onPress: () =>
+          report.mutate(
+            { targetType: 'event', targetId: event.id },
+            {
+              onSuccess: () =>
+                Alert.alert('Thanks for the report', 'We’ll take a look at this event.'),
+              onError: (e) => Alert.alert('Could not report', (e as Error).message),
+            },
+          ),
+      },
+    ]);
+  return (
+    <Pressable onPress={onPress} style={{ alignSelf: 'center', paddingVertical: Spacing.three }}>
+      <Text style={{ color: p.textSecondary, fontSize: 13, fontWeight: '600' }}>
+        Report this event
+      </Text>
+    </Pressable>
   );
 }
 
@@ -534,6 +567,8 @@ export default function EventScreen() {
             ) : (
               <CommentsSection event={event} />
             )}
+
+            {sbEvent ? <SupabaseReportEvent event={event} /> : null}
           </View>
         </ScrollView>
 
