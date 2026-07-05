@@ -146,6 +146,15 @@ describe('archiveSweep with recurring events', () => {
   });
 });
 
+describe('map filter persistence', () => {
+  it('setMapCategories / setMapShowEvents update the persisted selections', () => {
+    state().setMapCategories(['dog_park', 'beach']);
+    state().setMapShowEvents(false);
+    expect(state().mapCategories).toEqual(['dog_park', 'beach']);
+    expect(state().mapShowEvents).toBe(false);
+  });
+});
+
 describe('confirmAge / resetAgeGate', () => {
   it('flips the one-time age-confirmation flag', () => {
     useStore.setState({ ageConfirmed: false });

@@ -52,11 +52,15 @@ interface AppState {
   draft: Partial<EventDraft> | null;
   editEvent: PetEvent | null;
   ageConfirmed: boolean;
+  mapCategories: string[];
+  mapShowEvents: boolean;
 
   setHasHydrated: (v: boolean) => void;
   confirmAge: () => void;
   resetAgeGate: () => void;
   setEditEvent: (e: PetEvent | null) => void;
+  setMapCategories: (c: string[]) => void;
+  setMapShowEvents: (v: boolean) => void;
   reseed: (center: LatLng, label: string, keepProfile?: boolean) => void;
   adoptGpsCenter: (center: LatLng) => void;
   archiveSweep: () => void;
@@ -121,11 +125,15 @@ export const useStore = create<AppState>()(
       draft: null,
       editEvent: null,
       ageConfirmed: false,
+      mapCategories: ['dog_park', 'park', 'nature_reserve', 'beach', 'trail'],
+      mapShowEvents: true,
 
       setHasHydrated: (v) => set({ hasHydrated: v }),
       confirmAge: () => set({ ageConfirmed: true }),
       resetAgeGate: () => set({ ageConfirmed: false }),
       setEditEvent: (e) => set({ editEvent: e }),
+      setMapCategories: (c) => set({ mapCategories: c }),
+      setMapShowEvents: (v) => set({ mapShowEvents: v }),
 
       reseed: (center, label, keepProfile = true) => {
         const s = get();
@@ -508,6 +516,8 @@ export const useStore = create<AppState>()(
         placeReviews: s.placeReviews,
         favorites: s.favorites,
         ageConfirmed: s.ageConfirmed,
+        mapCategories: s.mapCategories,
+        mapShowEvents: s.mapShowEvents,
       }),
       onRehydrateStorage: () => (state) => {
         state?.setHasHydrated(true);
