@@ -1,16 +1,19 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('./supabase', () => ({
-  supabase: { auth: { getUser: vi.fn() }, from: vi.fn() },
+  supabase: { auth: { getUser: vi.fn() }, from: vi.fn(), rpc: vi.fn() },
 }));
 
+import { DEFAULT_FILTERS } from './filters';
 import { supabase } from './supabase';
-import { createEvent, fetchEventById, toEvent } from './use-events';
+import { createEvent, fetchDiscoverEvents, fetchEventById, toEvent } from './use-events';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const auth = supabase.auth as any;
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const from = supabase.from as any;
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const rpc = supabase.rpc as any;
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -88,6 +91,33 @@ describe('createEvent', () => {
       expect.objectContaining({ host_id: 'u1', title: 'T', lat: 1, lng: 2, venue_type: 'public_park' }),
     );
     expect(id).toBe('new-id');
+  });
+});
+
+describe('fetchDiscoverEvents', () => {
+  it('calls the nearby_events RPC with the radius in meters and ranks the rows', async () => {
+    const future = new Date(Date.now() + 3 * 86400000).toISOString();
+    rpc.mockResolvedValue({ data: [{ ...dbRow, starts_at: future, ends_at: future }], error: null });
+    // fetchGoingCounts → from('rsvps').select().in().eq()
+    from.mockReturnValue({
+      select: () => ({ in: () => ({ eq: vi.fn().mockResolvedValue({ data: [], error: null }) }) }),
+    });
+
+    const center = { lat: 30, lng: -97 };
+    const items = await fetchDiscoverEvents(center, { ...DEFAULT_FILTERS, radiusMi: 10 });
+
+    expect(rpc).toHaveBeenCalledWith('nearby_events', {
+      p_lat: 30,
+      p_lng: -97,
+      p_radius_m: 10 * 1609.34,
+    });
+    expect(items.map((i) => i.event.id)).toEqual(['e1']);
+    expect(items[0].goingCount).toBe(0);
+  });
+
+  it('throws when the RPC errors', async () => {
+    rpc.mockResolvedValue({ data: null, error: { message: 'boom' } });
+    await expect(fetchDiscoverEvents({ lat: 0, lng: 0 }, DEFAULT_FILTERS)).rejects.toBeTruthy();
   });
 });
 
