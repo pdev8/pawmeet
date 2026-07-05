@@ -57,7 +57,7 @@ email/password is a placeholder for SSO. Milestone mapping lives in [SPEC.md §9
 - [ ] Cluster pins when zoomed out (many places overlap)
 - [ ] Cache Overpass results so re-opening the map isn't a cold fetch
 - [ ] Loading / empty / error states polish for "search this area"
-- [ ] Show event pins on the map (tie Discover events → map), not just POIs
+- [x] Show event pins on the map (tie Discover events → map) — accent paw pins + Events toggle (#34); pins follow the Discover area, region refetch is a follow-up
 - [ ] Legend / key for the category colors
 
 ## EPIC 3 — Place Reviews (extend what's built)  🟢 ⭐
