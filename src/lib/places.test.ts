@@ -1,10 +1,11 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import {
   categorize,
   demoReviews,
   placeRating,
   ringAreaM2,
+  searchAddresses,
   type DogPlace,
   type MapPoint,
 } from './places';
@@ -99,5 +100,42 @@ describe('demoReviews', () => {
 
   it('returns nothing when there are no reviewers', () => {
     expect(demoReviews(mkPlace(), [])).toEqual([]);
+  });
+});
+
+describe('searchAddresses', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('returns [] for short queries without hitting the network', async () => {
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+    expect(await searchAddresses('ab')).toEqual([]);
+    expect(fetchMock).not.toHaveBeenCalled();
+  });
+
+  it('maps Nominatim hits to lat/lng + a short label + full name', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn().mockResolvedValue({
+        ok: true,
+        json: async () => [
+          { lat: '33.66', lon: '-118.00', display_name: 'Huntington Dog Beach, Huntington Beach, CA, USA' },
+        ],
+      }),
+    );
+    const out = await searchAddresses('huntington dog beach');
+    expect(out).toEqual([
+      {
+        lat: 33.66,
+        lng: -118.0,
+        label: 'Huntington Dog Beach, Huntington Beach',
+        full: 'Huntington Dog Beach, Huntington Beach, CA, USA',
+      },
+    ]);
+  });
+
+  it('returns [] on a failed response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue({ ok: false }));
+    expect(await searchAddresses('somewhere')).toEqual([]);
   });
 });

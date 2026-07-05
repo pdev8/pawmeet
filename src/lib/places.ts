@@ -31,6 +31,31 @@ export const CATEGORY_LABELS: Record<PlaceCategory, string> = {
   trail: 'Trail',
 };
 
+export interface AddressHit {
+  lat: number;
+  lng: number;
+  label: string;
+  full: string;
+}
+
+/** Address autocomplete via Nominatim — up to `limit` suggestions (empty for short queries). */
+export async function searchAddresses(query: string, limit = 5): Promise<AddressHit[]> {
+  const q = query.trim();
+  if (q.length < 3) return [];
+  const url = `https://nominatim.openstreetmap.org/search?format=json&limit=${limit}&q=${encodeURIComponent(q)}`;
+  const res = await fetch(url, {
+    headers: { 'User-Agent': 'Pawk-demo/1.0 (pet events prototype)' },
+  });
+  if (!res.ok) return [];
+  const data = (await res.json()) as { lat: string; lon: string; display_name: string }[];
+  return (data ?? []).map((h) => ({
+    lat: parseFloat(h.lat),
+    lng: parseFloat(h.lon),
+    label: h.display_name.split(',').slice(0, 2).join(','),
+    full: h.display_name,
+  }));
+}
+
 export async function geocodeLocation(
   query: string,
 ): Promise<{ lat: number; lng: number; label: string } | null> {
