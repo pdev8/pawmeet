@@ -78,7 +78,7 @@ email/password is a placeholder for SSO. Milestone mapping lives in [SPEC.md §9
 ## EPIC 5 — Post / Host an Event  🟢
 - [ ] Address autocomplete (MapKit search) in the Where step
 - [x] Real cover-photo upload — Storage foundation (public `photos` bucket + RLS, `uploadPublicImage`/`pickImage`, #29) + Upload tile in the Post wizard (#30); placedog presets kept as quick options
-- [ ] Edit event (notify attendees of time/place changes)
+- [~] Edit event — hosts edit their event via the Post wizard (#31, RLS host-only); notifying attendees of changes needs push (Epic 8), and address relocation is a follow-up
 - [ ] Host dashboard: attendee + pet list, headcount incl. dogs
 - [x] Recurring events (weekly / biweekly / monthly) — recurrence option in the post wizard; auto-advances to the next occurrence instead of archiving
 
