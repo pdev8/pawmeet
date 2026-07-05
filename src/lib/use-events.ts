@@ -75,13 +75,20 @@ export type NewEvent = {
   lng: number;
 };
 
-/** Active, public events (client-side radius/date/breed/venue filter + sort). */
+const MILES_TO_METERS = 1609.34;
+
+/**
+ * Discover events near a center. The `nearby_events` RPC does the heavy lifting
+ * server-side (PostGIS `ST_DWithin` radius + active/public/future filter); the
+ * client `rankDiscoverEvents` then applies the date window, breed/venue filters,
+ * "has spots", sort, and per-event distance for display.
+ */
 export async function fetchDiscoverEvents(center: LatLng, filters: Filters): Promise<DiscoveryItem[]> {
-  const { data, error } = await supabase
-    .from('events')
-    .select(EVENT_COLUMNS)
-    .eq('status', 'active')
-    .eq('visibility', 'public');
+  const { data, error } = await supabase.rpc('nearby_events', {
+    p_lat: center.lat,
+    p_lng: center.lng,
+    p_radius_m: filters.radiusMi * MILES_TO_METERS,
+  });
   if (error) throw error;
   const events = (data as DbEvent[]).map(toEvent);
   const goingCounts = await fetchGoingCounts(events.map((e) => e.id));
