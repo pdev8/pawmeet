@@ -97,12 +97,6 @@ function pushNotification(
   ];
 }
 
-const CANNED_HOST_REPLIES = [
-  'Great question — will post details in the thread tonight! 🐶',
-  "Yes! And feel free to bring a friend (human or dog).",
-  "Good thinking — I'll pin an update about that tomorrow.",
-];
-
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -242,25 +236,6 @@ export const useStore = create<AppState>()(
             ],
           });
         }
-        // Demo: the mock host approves your request a few seconds later.
-        if (ev.hostId !== s.currentUserId) {
-          setTimeout(() => {
-            const st = get();
-            const r = st.rsvps.find((x) => x.id === rsvpId);
-            if (!r || r.status !== 'pending_approval') return;
-            set({
-              rsvps: st.rsvps.map((x) =>
-                x.id === rsvpId ? { ...x, status: 'going' } : x,
-              ),
-              notifications: pushNotification(st.notifications, {
-                type: 'rsvp_approved',
-                eventId,
-                fromUserId: ev.hostId,
-                message: `${st.users[ev.hostId]?.displayName ?? 'The host'} approved your request to join ${ev.title} — exact address unlocked`,
-              }),
-            });
-          }, 6000);
-        }
       },
 
       cancelRsvp: (eventId) => {
@@ -331,33 +306,6 @@ export const useStore = create<AppState>()(
           createdAt: new Date().toISOString(),
         };
         set({ comments: [...s.comments, comment] });
-        // Demo: mock hosts reply to your top-level questions after a few seconds.
-        if (!parentId && ev.hostId !== s.currentUserId && ev.status === 'active') {
-          const reply = CANNED_HOST_REPLIES[s.comments.length % CANNED_HOST_REPLIES.length];
-          setTimeout(() => {
-            const st = get();
-            st.comments.some((c) => c.id === comment.id) &&
-              set({
-                comments: [
-                  ...st.comments,
-                  {
-                    id: newId('c'),
-                    eventId,
-                    authorId: ev.hostId,
-                    body: reply,
-                    parentId: comment.id,
-                    createdAt: new Date().toISOString(),
-                  },
-                ],
-                notifications: pushNotification(st.notifications, {
-                  type: 'reply',
-                  eventId,
-                  fromUserId: ev.hostId,
-                  message: `${st.users[ev.hostId]?.displayName ?? 'The host'} replied to your comment on ${ev.title}`,
-                }),
-              });
-          }, 7000);
-        }
       },
 
       editComment: (commentId, body) => {
