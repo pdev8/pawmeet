@@ -67,6 +67,7 @@ export default function RootLayout() {
               options={{ title: 'Community Guidelines', presentation: 'modal' }}
             />
             <Stack.Screen name="user/[id]" options={{ headerShown: true, title: 'Profile' }} />
+            <Stack.Screen name="manage/[id]" options={{ headerShown: true, title: 'Manage event' }} />
           </Stack>
         ) : (
           <AuthScreen />

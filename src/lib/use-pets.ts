@@ -41,6 +41,17 @@ export async function fetchMyPets(): Promise<Pet[]> {
   return (data as DbPet[]).map(toPet);
 }
 
+/** Pets for a set of owners (world-readable) — for host dashboards / attendee lists. */
+export async function fetchPetsForOwners(ownerIds: string[]): Promise<Pet[]> {
+  if (ownerIds.length === 0) return [];
+  const { data, error } = await supabase
+    .from('pets')
+    .select('id, owner_id, name, breed, photo_url, size')
+    .in('owner_id', ownerIds);
+  if (error) throw error;
+  return (data as DbPet[]).map(toPet);
+}
+
 export async function addPet(input: PetInput): Promise<void> {
   const {
     data: { user },
@@ -70,6 +81,15 @@ export async function updatePet(id: string, patch: PetPatch): Promise<void> {
 
 export function useMyPets() {
   return useQuery({ queryKey: ['pets'], queryFn: fetchMyPets });
+}
+
+export function usePetsForOwners(ownerIds: string[]) {
+  const key = [...ownerIds].sort();
+  return useQuery({
+    queryKey: ['pets', 'owners', key],
+    queryFn: () => fetchPetsForOwners(ownerIds),
+    enabled: ownerIds.length > 0,
+  });
 }
 
 export function useAddPet() {
