@@ -67,7 +67,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 
 ## EPIC 5 — Post / Host an Event  🟢
 - [ ] Address autocomplete (MapKit search) in the Where step
-- [ ] Real cover-photo upload (currently placedog.net)
+- [~] Real cover-photo upload (currently placedog.net) — Storage foundation shipped (public `photos` bucket + RLS + `uploadPublicImage`/`pickImage`), wired to pet photos first (#29); event cover + review photos are the next surfaces
 - [ ] Edit event (notify attendees of time/place changes)
 - [ ] Host dashboard: attendee + pet list, headcount incl. dogs
 - [x] Recurring events (weekly / biweekly / monthly) — recurrence option in the post wizard; auto-advances to the next occurrence instead of archiving
@@ -96,7 +96,7 @@ that turns all of it real. Milestone mapping lives in [SPEC.md §9](SPEC.md).
 - [ ] Optional: create a saved search from breed + area at the end
 
 ## EPIC 10 — Profiles & Badges  🟢
-- [~] Pet profile screen (photo, breed, size, temperament tags) — pets shown on the user profile (#27); dedicated editable pet screen still TODO
+- [~] Pet profile screen (photo, breed, size, temperament tags) — pets shown on the user profile (#27), real photo upload on add/edit (#29); dedicated standalone pet screen + temperament editing still TODO
 - [ ] Achievement badges: First Meetup, Host, 5 Events, Breed Ambassador
 - [x] Tap attendee badge → mini profile — user profile screen from attendee strips, comment authors, and the event host (#27, #28), with report/block
 
