@@ -6,7 +6,7 @@ vi.mock('./supabase', () => ({
 
 import { DEFAULT_FILTERS } from './filters';
 import { supabase } from './supabase';
-import { createEvent, fetchDiscoverEvents, fetchEventById, toEvent } from './use-events';
+import { createEvent, fetchDiscoverEvents, fetchEventById, toEvent, updateEvent } from './use-events';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const auth = supabase.auth as any;
@@ -125,6 +125,36 @@ describe('fetchDiscoverEvents', () => {
   it('throws when the RPC errors', async () => {
     rpc.mockResolvedValue({ data: null, error: { message: 'boom' } });
     await expect(fetchDiscoverEvents({ lat: 0, lng: 0 }, DEFAULT_FILTERS)).rejects.toBeTruthy();
+  });
+});
+
+describe('updateEvent', () => {
+  it('maps only provided camelCase fields to snake_case columns', async () => {
+    const eq = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn(() => ({ eq }));
+    from.mockReturnValue({ update });
+
+    await updateEvent('e1', { title: 'New title', capacity: 8, coverPhotoUrl: 'c.png' });
+
+    expect(from).toHaveBeenCalledWith('events');
+    expect(update).toHaveBeenCalledWith({ title: 'New title', capacity: 8, cover_photo_url: 'c.png' });
+    expect(eq).toHaveBeenCalledWith('id', 'e1');
+  });
+
+  it('nulls cleared optional fields (breedFocus/recurrence/capacity)', async () => {
+    const eq = vi.fn().mockResolvedValue({ error: null });
+    const update = vi.fn(() => ({ eq }));
+    from.mockReturnValue({ update });
+
+    await updateEvent('e1', { breedFocus: undefined, recurrence: undefined, capacity: undefined });
+
+    // undefined patch keys are skipped entirely (not sent as null)
+    expect(update).toHaveBeenCalledWith({});
+  });
+
+  it('propagates a database error', async () => {
+    from.mockReturnValue({ update: () => ({ eq: vi.fn().mockResolvedValue({ error: { message: 'no' } }) }) });
+    await expect(updateEvent('e1', { title: 'x' })).rejects.toBeTruthy();
   });
 });
 
