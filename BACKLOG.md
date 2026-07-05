@@ -83,7 +83,7 @@ email/password is a placeholder for SSO. Milestone mapping lives in [SPEC.md §9
 - [x] Recurring events (weekly / biweekly / monthly) — recurrence option in the post wizard; auto-advances to the next occurrence instead of archiving
 
 ## EPIC 6 — RSVP & Attendance  🟢
-- [ ] Choose which pet(s) you're bringing on RSVP
+- [~] ~~Choose which pet(s) you're bringing on RSVP~~ — **won't do** (product decision, 2026-07-05); `rsvps.pet_ids` stays unused
 - [ ] Add-to-calendar from event detail
 - [ ] New-account friction for hosting backyard events (attended 1 / verified phone)
 
