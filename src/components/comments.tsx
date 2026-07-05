@@ -14,7 +14,13 @@ import { Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { timeAgo } from '@/lib/dates';
 import { useStore } from '@/lib/store';
-import type { EventComment, PetEvent } from '@/lib/types';
+import {
+  useCommentActions,
+  useEventComments,
+  type DisplayComment,
+} from '@/lib/use-comments';
+import { useCurrentUserId, useEventRsvps } from '@/lib/use-rsvps';
+import type { EventComment, PetEvent, User } from '@/lib/types';
 
 function CommentRow({
   comment,
@@ -229,6 +235,262 @@ export function CommentsSection({ event }: { event: PetEvent }) {
           <CommentRow comment={c} event={event} isReply={false} onReply={setReplyTo} />
           {repliesFor(c.id).map((r) => (
             <CommentRow key={r.id} comment={r} event={event} isReply onReply={setReplyTo} />
+          ))}
+        </View>
+      ))}
+    </View>
+  );
+}
+
+function SupabaseCommentRow({
+  comment,
+  event,
+  isReply,
+  myId,
+  goingIds,
+  locked,
+  onReply,
+  onEdit,
+  onDelete,
+}: {
+  comment: DisplayComment;
+  event: PetEvent;
+  isReply: boolean;
+  myId: string | undefined;
+  goingIds: Set<string>;
+  locked: boolean;
+  onReply: (c: DisplayComment) => void;
+  onEdit: (id: string, body: string) => void;
+  onDelete: (id: string, by: 'author' | 'host') => void;
+}) {
+  const p = usePalette();
+  const [editing, setEditing] = useState(false);
+  const [editText, setEditText] = useState(comment.body);
+
+  const author: User = {
+    id: comment.authorId,
+    displayName: comment.authorName,
+    avatarUrl: comment.authorAvatar ?? '',
+    homeArea: '',
+  };
+  const isMine = comment.authorId === myId;
+  const iAmHost = event.hostId === myId;
+  const authorIsHost = comment.authorId === event.hostId;
+  const authorGoing = goingIds.has(comment.authorId);
+
+  if (comment.deletedBy) {
+    return (
+      <View style={[styles.row, isReply && styles.reply]}>
+        <Text style={[styles.deleted, { color: p.textSecondary }]}>
+          {comment.deletedBy === 'host' ? 'Removed by host' : 'Deleted by author'}
+        </Text>
+      </View>
+    );
+  }
+
+  return (
+    <View style={[styles.row, isReply && styles.reply]}>
+      <OwnerPetBadge user={author} size={34} />
+      <View style={styles.bubbleCol}>
+        <View style={styles.authorLine}>
+          <Text style={[styles.author, { color: p.text }]}>{author.displayName}</Text>
+          {authorIsHost ? (
+            <View style={[styles.roleChip, { borderColor: p.accent }]}>
+              <Text style={[styles.roleChipText, { color: p.accent }]}>Host</Text>
+            </View>
+          ) : authorGoing ? (
+            <View style={[styles.roleChip, { borderColor: p.success }]}>
+              <Text style={[styles.roleChipText, { color: p.success }]}>Going</Text>
+            </View>
+          ) : null}
+          <Text style={[styles.time, { color: p.textSecondary }]}>
+            {timeAgo(comment.createdAt)}
+            {comment.editedAt ? ' · edited' : ''}
+          </Text>
+        </View>
+
+        {editing ? (
+          <View style={styles.editWrap}>
+            <TextInput
+              value={editText}
+              onChangeText={setEditText}
+              multiline
+              maxLength={1000}
+              style={[styles.editInput, { color: p.text, borderColor: p.separator }]}
+            />
+            <View style={styles.actionsLine}>
+              <Pressable onPress={() => setEditing(false)}>
+                <Text style={[styles.action, { color: p.textSecondary }]}>Cancel</Text>
+              </Pressable>
+              <Pressable
+                onPress={() => {
+                  const trimmed = editText.trim();
+                  if (trimmed) onEdit(comment.id, trimmed);
+                  setEditing(false);
+                }}>
+                <Text style={[styles.action, { color: p.accent }]}>Save</Text>
+              </Pressable>
+            </View>
+          </View>
+        ) : (
+          <Text style={[styles.body, { color: p.text }]}>{comment.body}</Text>
+        )}
+
+        {!locked && !editing ? (
+          <View style={styles.actionsLine}>
+            {!isReply ? (
+              <Pressable onPress={() => onReply(comment)}>
+                <Text style={[styles.action, { color: p.textSecondary }]}>Reply</Text>
+              </Pressable>
+            ) : null}
+            {isMine ? (
+              <>
+                <Pressable onPress={() => { setEditText(comment.body); setEditing(true); }}>
+                  <Text style={[styles.action, { color: p.textSecondary }]}>Edit</Text>
+                </Pressable>
+                <Pressable
+                  onPress={() =>
+                    Alert.alert('Delete comment?', undefined, [
+                      { text: 'Cancel', style: 'cancel' },
+                      {
+                        text: 'Delete',
+                        style: 'destructive',
+                        onPress: () => onDelete(comment.id, 'author'),
+                      },
+                    ])
+                  }>
+                  <Text style={[styles.action, { color: p.danger }]}>Delete</Text>
+                </Pressable>
+              </>
+            ) : iAmHost ? (
+              <Pressable
+                onPress={() =>
+                  Alert.alert('Remove this comment?', 'As the host you can remove comments on your event.', [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                      text: 'Remove',
+                      style: 'destructive',
+                      onPress: () => onDelete(comment.id, 'host'),
+                    },
+                  ])
+                }>
+                <Text style={[styles.action, { color: p.danger }]}>Remove</Text>
+              </Pressable>
+            ) : null}
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
+
+export function SupabaseCommentsSection({ event }: { event: PetEvent }) {
+  const p = usePalette();
+  const [text, setText] = useState('');
+  const [replyTo, setReplyTo] = useState<DisplayComment | null>(null);
+
+  const { data: comments = [] } = useEventComments(event.id);
+  const { data: myId } = useCurrentUserId();
+  const { data: rsvps = [] } = useEventRsvps(event.id);
+  const actions = useCommentActions(event.id);
+
+  const goingIds = new Set(rsvps.filter((r) => r.status === 'going').map((r) => r.userId));
+
+  const topLevel = comments
+    .filter((c) => !c.parentId)
+    .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  const repliesFor = (id: string) =>
+    comments.filter((c) => c.parentId === id).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
+
+  const locked = event.status !== 'active';
+  const visibleCount = comments.filter((c) => !c.deletedBy).length;
+
+  const send = () => {
+    const trimmed = text.trim();
+    if (!trimmed) return;
+    actions.add.mutate({ body: trimmed, parentId: replyTo?.id });
+    setText('');
+    setReplyTo(null);
+  };
+
+  return (
+    <View style={styles.section}>
+      <Text style={[styles.heading, { color: p.text }]}>
+        Comments{visibleCount > 0 ? ` (${visibleCount})` : ''}
+      </Text>
+
+      {locked ? (
+        <View style={[styles.lockedBanner, { backgroundColor: p.chipBg }]}>
+          <Icon sf="lock.fill" size={13} color={p.textSecondary} />
+          <Text style={[styles.lockedText, { color: p.textSecondary }]}>
+            This event is archived — comments are closed.
+          </Text>
+        </View>
+      ) : (
+        <View style={[styles.composer, { backgroundColor: p.card, borderColor: p.separator }]}>
+          {replyTo ? (
+            <View style={styles.replyingTo}>
+              <Text style={[styles.replyingText, { color: p.textSecondary }]} numberOfLines={1}>
+                Replying to {replyTo.authorName}
+              </Text>
+              <Pressable onPress={() => setReplyTo(null)}>
+                <Icon sf="xmark.circle.fill" size={16} color={p.textSecondary} />
+              </Pressable>
+            </View>
+          ) : null}
+          <View style={styles.inputRow}>
+            <TextInput
+              value={text}
+              onChangeText={setText}
+              placeholder={replyTo ? 'Write a reply…' : 'Ask the host a question…'}
+              placeholderTextColor={p.textSecondary}
+              multiline
+              maxLength={1000}
+              style={[styles.input, { color: p.text }]}
+            />
+            <Pressable
+              onPress={send}
+              disabled={!text.trim()}
+              accessibilityLabel="Send comment"
+              style={{ opacity: text.trim() ? 1 : 0.35 }}>
+              <Icon sf="paperplane.circle.fill" size={30} color={p.accent} />
+            </Pressable>
+          </View>
+        </View>
+      )}
+
+      {topLevel.length === 0 && !locked ? (
+        <Text style={[styles.empty, { color: p.textSecondary }]}>
+          No comments yet — questions about parking, puppies, or treats go here.
+        </Text>
+      ) : null}
+
+      {topLevel.map((c) => (
+        <View key={c.id} style={styles.thread}>
+          <SupabaseCommentRow
+            comment={c}
+            event={event}
+            isReply={false}
+            myId={myId}
+            goingIds={goingIds}
+            locked={locked}
+            onReply={setReplyTo}
+            onEdit={(id, body) => actions.edit.mutate({ id, body })}
+            onDelete={(id, by) => actions.remove.mutate({ id, by })}
+          />
+          {repliesFor(c.id).map((r) => (
+            <SupabaseCommentRow
+              key={r.id}
+              comment={r}
+              event={event}
+              isReply
+              myId={myId}
+              goingIds={goingIds}
+              locked={locked}
+              onReply={setReplyTo}
+              onEdit={(id, body) => actions.edit.mutate({ id, body })}
+              onDelete={(id, by) => actions.remove.mutate({ id, by })}
+            />
           ))}
         </View>
       ))}
