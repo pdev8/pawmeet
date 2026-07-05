@@ -34,6 +34,9 @@ yarn-error.*
 .env
 .env*.local
 
+# admin console local config (admin/config.example.js is committed as a template)
+admin/config.js
+
 # typescript
 *.tsbuildinfo
 
