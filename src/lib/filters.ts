@@ -114,3 +114,41 @@ export function discoverEvents(
   });
   return items;
 }
+
+/**
+ * Rank a plain list of events for discovery — used for Supabase-sourced events.
+ * Same windows/radius/breed/venue rules as discoverEvents; goingCount is 0 until
+ * RSVPs are migrated off the mock store, so "popular" sort is a no-op for now.
+ */
+export function rankDiscoverEvents(
+  events: PetEvent[],
+  center: LatLng,
+  f: Filters,
+): DiscoveryItem[] {
+  const now = Date.now();
+  const end = windowEnd(f.dateWindow).getTime();
+
+  const items: DiscoveryItem[] = [];
+  for (const ev of events) {
+    if (ev.status !== 'active') continue;
+    const starts = new Date(ev.startsAt).getTime();
+    if (starts < now || starts > end) continue;
+    const dist = distanceMi(center, { lat: ev.lat, lng: ev.lng });
+    if (dist > f.radiusMi) continue;
+    if (f.breed && ev.breedFocus && ev.breedFocus !== f.breed) continue;
+    if (f.venues.length > 0 && !f.venues.includes(ev.venueType)) continue;
+    // No RSVPs yet, so a positive capacity always has spots.
+    if (f.hasSpots && ev.capacity != null && ev.capacity <= 0) continue;
+    items.push({ event: ev, distanceMi: dist, goingCount: 0 });
+  }
+
+  items.sort((a, b) => {
+    switch (f.sort) {
+      case 'nearest':
+        return a.distanceMi - b.distanceMi;
+      default:
+        return a.event.startsAt.localeCompare(b.event.startsAt);
+    }
+  });
+  return items;
+}

@@ -33,6 +33,7 @@ import {
   spotsLeft,
   visibleAddress,
 } from '@/lib/selectors';
+import { useEvent } from '@/lib/use-events';
 import { useStore } from '@/lib/store';
 import {
   RECURRENCE_LABELS,
@@ -239,7 +240,10 @@ export default function EventScreen() {
   const store = useStore();
   const [profileUser, setProfileUser] = useState<User | null>(null);
 
-  const event = id ? store.events[id] : undefined;
+  // Read the event from Supabase, falling back to the mock store for the seed
+  // events still shown on Profile during the data-layer migration.
+  const { data: sbEvent } = useEvent(id);
+  const event = sbEvent ?? (id ? store.events[id] : undefined);
   if (!event) {
     return (
       <View style={[styles.screen, { backgroundColor: p.background, justifyContent: 'center' }]}>

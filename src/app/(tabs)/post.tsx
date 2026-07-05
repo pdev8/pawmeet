@@ -23,6 +23,7 @@ import { usePalette } from '@/hooks/use-palette';
 import { BREEDS } from '@/lib/breeds';
 import { at } from '@/lib/dates';
 import { offsetMi } from '@/lib/geo';
+import { useCreateEvent } from '@/lib/use-events';
 import { useStore } from '@/lib/store';
 import {
   RECURRENCE_LABELS,
@@ -75,6 +76,7 @@ function freshForm(): FormState {
 export default function PostScreen() {
   const p = usePalette();
   const router = useRouter();
+  const createEvent = useCreateEvent();
   const [step, setStep] = useState(0);
   const [form, setForm] = useState<FormState>(freshForm);
 
@@ -136,7 +138,7 @@ export default function PostScreen() {
     setStep((s) => Math.min(s + 1, STEPS.length - 1));
   };
 
-  const publish = () => {
+  const publish = async () => {
     const s = useStore.getState();
     // Mock geocoding: drop the pin near the current area center.
     const jitter = () => (Math.random() - 0.5) * 2;
@@ -145,25 +147,30 @@ export default function PostScreen() {
       : offsetMi(s.center, jitter() * 2, jitter() * 2);
     const end = new Date(form.start.getTime() + form.durH * 3600 * 1000);
     const capacity = parseInt(form.capacity, 10);
-    const id = s.createEvent({
-      title: form.title.trim(),
-      description: form.description.trim() || 'See you there! 🐾',
-      coverPhotoUrl: form.coverPhotoUrl,
-      startsAt: form.start.toISOString(),
-      endsAt: end.toISOString(),
-      venueType: form.venueType,
-      address: form.address.trim() || 'Near your area',
-      areaLabel: form.venueType === 'home_backyard' ? 'Near you' : form.address.trim() || 'Near you',
-      breedFocus: form.breedFocus ?? undefined,
-      capacity: Number.isFinite(capacity) && capacity > 0 ? capacity : undefined,
-      rsvpMode: form.rsvpMode,
-      recurrence: form.recurrence ?? undefined,
-      lat: loc.lat,
-      lng: loc.lng,
-    });
-    setForm(freshForm());
-    setStep(0);
-    router.push(`/event/${id}`);
+    try {
+      const id = await createEvent.mutateAsync({
+        title: form.title.trim(),
+        description: form.description.trim() || 'See you there! 🐾',
+        coverPhotoUrl: form.coverPhotoUrl,
+        startsAt: form.start.toISOString(),
+        endsAt: end.toISOString(),
+        venueType: form.venueType,
+        address: form.address.trim() || 'Near your area',
+        areaLabel:
+          form.venueType === 'home_backyard' ? 'Near you' : form.address.trim() || 'Near you',
+        breedFocus: form.breedFocus ?? undefined,
+        capacity: Number.isFinite(capacity) && capacity > 0 ? capacity : undefined,
+        rsvpMode: form.rsvpMode,
+        recurrence: form.recurrence ?? undefined,
+        lat: loc.lat,
+        lng: loc.lng,
+      });
+      setForm(freshForm());
+      setStep(0);
+      router.push(`/event/${id}`);
+    } catch (e) {
+      Alert.alert('Couldn’t publish', e instanceof Error ? e.message : 'Please try again.');
+    }
   };
 
   const input = (extra?: object) => [
