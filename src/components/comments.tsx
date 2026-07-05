@@ -1,3 +1,4 @@
+import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
@@ -273,6 +274,7 @@ function SupabaseCommentRow({
   const [editing, setEditing] = useState(false);
   const [editText, setEditText] = useState(comment.body);
 
+  const router = useRouter();
   const author: User = {
     id: comment.authorId,
     displayName: comment.authorName,
@@ -296,7 +298,9 @@ function SupabaseCommentRow({
 
   return (
     <View style={[styles.row, isReply && styles.reply]}>
-      <OwnerPetBadge user={author} size={34} />
+      <Pressable onPress={() => router.push(`/user/${comment.authorId}`)}>
+        <OwnerPetBadge user={author} size={34} />
+      </Pressable>
       <View style={styles.bubbleCol}>
         <View style={styles.authorLine}>
           <Text style={[styles.author, { color: p.text }]}>{author.displayName}</Text>
