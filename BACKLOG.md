@@ -54,7 +54,8 @@ email/password is a placeholder for SSO. Milestone mapping lives in [SPEC.md §9
 
 ## EPIC 2 — Map & Places  🟢
 - [x] Persist filter selections across sessions — category + Events toggles persist via the store (#35)
-- [x] Cluster pins when zoomed out (many places overlap) — supercluster over place + event pins, count bubbles that zoom in (#38)
+- [x] Cluster pins when zoomed out (many places overlap) — supercluster over place + event pins; tap → grouped card (#38, reworked #39)
+- [ ] ⭐ **Clustering polish (future enhancement)** — the sticky-drag glide still isn't as fluid as we want and clusters don't always behave as expected on zoom/pan. Revisit: tune the AnimatedRegion glide (duration/easing) + `tracksViewChanges` window in `src/app/map.tsx`, and the `radius`/`maxZoom` in `src/lib/cluster.ts`; consider recomputing clusters on `onRegionChange` (live) rather than only `onRegionChangeComplete`, or a purpose-built clustering lib.
 - [x] Cache Overpass results so re-opening the map isn't a cold fetch — 5-min per-center cache (#36)
 - [x] Loading / empty / error states polish for "search this area" — Retry on error + distinct empty state (#36)
 - [x] Show event pins on the map (tie Discover events → map) — accent paw pins + Events toggle (#34); pins follow the Discover area, region refetch is a follow-up
