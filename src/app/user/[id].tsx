@@ -14,9 +14,7 @@ import { useBlockActions, useBlockedIds } from '@/lib/use-blocks';
 import { useReportContent } from '@/lib/use-reports';
 import { useCurrentUserId } from '@/lib/use-rsvps';
 import { useUserProfile } from '@/lib/use-user-profile';
-import type { PetSize } from '@/lib/types';
-
-const SIZE_LABELS: Record<PetSize, string> = { S: 'Small', M: 'Medium', L: 'Large' };
+import { SIZE_LABELS } from '@/lib/types';
 
 export default function UserProfileScreen() {
   const p = usePalette();
