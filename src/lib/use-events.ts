@@ -2,7 +2,7 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 
 import { rankDiscoverEvents, type DiscoveryItem, type Filters } from './filters';
 import { fetchBlockedIds } from './use-blocks';
-import { fetchGoingCounts } from './use-rsvps';
+import { fetchGoingAttendees } from './use-rsvps';
 import { supabase } from './supabase';
 import type {
   EventRecurrence,
@@ -93,8 +93,18 @@ export async function fetchDiscoverEvents(center: LatLng, filters: Filters): Pro
   if (error) throw error;
   const blocked = new Set(await fetchBlockedIds());
   const events = (data as DbEvent[]).map(toEvent).filter((e) => !blocked.has(e.hostId));
-  const goingCounts = await fetchGoingCounts(events.map((e) => e.id));
-  return rankDiscoverEvents(events, center, filters, goingCounts);
+  const attendees = await fetchGoingAttendees(events.map((e) => e.id));
+  const goingCounts: Record<string, number> = {};
+  for (const [id, list] of Object.entries(attendees)) goingCounts[id] = list.length;
+  return rankDiscoverEvents(events, center, filters, goingCounts).map((item) => ({
+    ...item,
+    badges: (attendees[item.event.id] ?? []).slice(0, 3).map((a) => ({
+      user: { id: a.userId, displayName: a.name, avatarUrl: a.avatar ?? '', homeArea: '' },
+      pet: a.petPhoto
+        ? { id: '', ownerId: a.userId, name: a.petName ?? '', breed: '', photoUrl: a.petPhoto, size: 'M' as const }
+        : undefined,
+    })),
+  }));
 }
 
 export async function fetchEventById(id: string): Promise<PetEvent | null> {

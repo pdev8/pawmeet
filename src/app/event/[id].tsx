@@ -121,12 +121,15 @@ function SupabaseAttendeeStrip({
               avatarUrl: r.avatar ?? '',
               homeArea: '',
             };
+            const pet: Pet | undefined = r.petPhoto
+              ? { id: '', ownerId: r.userId, name: r.petName ?? '', breed: '', photoUrl: r.petPhoto, size: 'M' }
+              : undefined;
             return (
               <Pressable
                 key={r.id}
                 style={styles.stripItem}
                 onPress={() => router.push(`/user/${r.userId}`)}>
-                <OwnerPetBadge user={user} size={48} />
+                <OwnerPetBadge user={user} pet={pet} size={48} />
                 <Text style={[styles.stripName, { color: p.textSecondary }]} numberOfLines={1}>
                   {user.displayName.split(' ')[0]}
                 </Text>
