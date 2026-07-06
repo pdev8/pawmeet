@@ -82,7 +82,8 @@ Events (`use-events.ts`, discovery via the `nearby_events` PostGIS RPC), RSVP +
 host approve/decline (`use-rsvps.ts`), Comments (`use-comments.ts`), Place reviews
 (`use-place-reviews.ts`), Reports (`use-reports.ts`), Blocks (`use-blocks.ts`,
 mutual hide across discovery/comments/attendees), User profiles
-(`use-user-profile.ts`), Storage uploads (`storage.ts`). DB lives in
+(`use-user-profile.ts`), in-app Notifications (`use-notifications.ts` — real
+Inbox feed + `notifyEventAttendees`), Storage uploads (`storage.ts`). DB lives in
 `supabase/migrations/` (Postgres + PostGIS + RLS): tables profiles, pets, events,
 rsvps, comments, place_reviews, reports, blocks, admins, favorites, notifications;
 RPCs `nearby_events`, `archive_past_events` (scheduled hourly via **pg_cron**),
@@ -124,6 +125,16 @@ embedded; `reviews.ts` merges them newest-first (real `timeAgo` timestamps, your
 own labelled "You" for edit/delete) above deterministic demo reviews from
 `demoReviews()`, blended into a headline rating + count. The review composer is
 inline in the sheet, lifted over the keyboard with `KeyboardAvoidingView`.
+
+**Reusable UI & native modules.** Prefer the shared pieces before rebuilding:
+`SwipeableRow` (`src/components/swipeable-row.tsx`, tap-to-open + swipe-to-delete;
+tap is a gesture so a swipe never fires it), `confirmDestructive` (`src/lib/confirm.ts`,
+the Cancel + red-confirm dialog), the floating Glass back button pattern on pushed
+detail screens (`event`/`user`/`manage`), plus `Glass`, `Chip`, `Icon`, `OwnerPetBadge`,
+`EmptyState`. Native deps (all Expo Go–bundled or pure-JS, installed via
+`npx expo install`): `expo-image-picker` + `expo-calendar` (calendar via `src/lib/calendar.ts`),
+`supercluster` (map clustering, `src/lib/cluster.ts`), and `react-native-gesture-handler`
+with `GestureHandlerRootView` wrapping the app in `app/_layout.tsx`.
 
 **Web preview.** The app is iOS-first, but `metro.config.js` adds a web-only
 resolver (react-native-maps → empty, zustand → CJS build) and `map.web.tsx` is a

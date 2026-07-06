@@ -2,8 +2,12 @@ import { describe, expect, it, vi } from 'vitest';
 
 vi.mock('expo-calendar', () => ({ createEventInCalendarAsync: vi.fn() }));
 
-import { calendarDraft } from './calendar';
+import * as Calendar from 'expo-calendar';
+import { addEventToCalendar, calendarDraft } from './calendar';
 import type { PetEvent } from './types';
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const createEvent = Calendar.createEventInCalendarAsync as any;
 
 const ev = (over: Partial<PetEvent> = {}): PetEvent => ({
   id: 'e1',
@@ -35,5 +39,17 @@ describe('calendarDraft', () => {
 
   it('falls back to the area label when there is no address', () => {
     expect(calendarDraft(ev({ address: '' })).location).toBe('Irvine, CA');
+  });
+});
+
+describe('addEventToCalendar', () => {
+  it('opens the native dialog with the event draft', async () => {
+    createEvent.mockResolvedValue({ action: 'saved' });
+    await addEventToCalendar(ev());
+    expect(createEvent).toHaveBeenCalledTimes(1);
+    const arg = createEvent.mock.calls[0][0];
+    expect(arg.title).toBe('Pack Walk');
+    expect(arg.location).toBe('1 Main St, Irvine, CA');
+    expect(arg.startDate).toBeInstanceOf(Date);
   });
 });
