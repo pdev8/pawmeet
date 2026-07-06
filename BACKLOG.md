@@ -85,7 +85,7 @@ email/password is a placeholder for SSO. Milestone mapping lives in [SPEC.md §9
 
 ## EPIC 6 — RSVP & Attendance  🟢
 - [~] ~~Choose which pet(s) you're bringing on RSVP~~ — **won't do** (product decision, 2026-07-05); `rsvps.pet_ids` stays unused
-- [ ] Add-to-calendar from event detail
+- [x] Add-to-calendar from event detail — native Add Event sheet via expo-calendar (#42)
 - [ ] New-account friction for hosting backyard events (attended 1 / verified phone)
 
 ## EPIC 7 — Comments  🟢
