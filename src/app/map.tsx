@@ -41,6 +41,7 @@ import {
   useUpdatePlaceReview,
 } from '@/lib/use-place-reviews';
 import { blendedRating, mergeReviews, stars } from '@/lib/reviews';
+import { buildIndex, clustersFor, expansionRegion, type ClusterPoint } from '@/lib/cluster';
 import { DEFAULT_FILTERS } from '@/lib/filters';
 import { pickImage, uploadPublicImage } from '@/lib/storage';
 import { useDiscoverEvents } from '@/lib/use-events';
@@ -183,6 +184,29 @@ export default function MapScreen() {
     return ids;
   }, [places]);
 
+  // Cluster the point markers (pinned places + event pins) by the live region.
+  const [region, setRegion] = useState<Region>(initialRegion);
+  const placeById = useMemo(() => new Map(visible.map((pl) => [pl.id, pl])), [visible]);
+  const clusterPoints = useMemo<ClusterPoint[]>(() => {
+    const pts: ClusterPoint[] = [];
+    for (const pl of visible) {
+      if (pinnedIds.has(pl.id)) {
+        pts.push({ id: pl.id, kind: 'place', lat: pl.center.latitude, lng: pl.center.longitude });
+      }
+    }
+    if (showEvents) {
+      for (const { event } of eventItems) {
+        pts.push({ id: `ev-${event.id}`, kind: 'event', lat: event.lat, lng: event.lng });
+      }
+    }
+    return pts;
+  }, [visible, pinnedIds, showEvents, eventItems]);
+  const clusterIndex = useMemo(() => buildIndex(clusterPoints), [clusterPoints]);
+  const clusters = useMemo(
+    () => clustersFor(clusterIndex, clusterPoints, region),
+    [clusterIndex, clusterPoints, region],
+  );
+
   const reviewers = useMemo(
     () =>
       Object.values(store.users).filter((u) => u.id !== store.currentUserId),
@@ -282,7 +306,10 @@ export default function MapScreen() {
         initialRegion={initialRegion}
         showsUserLocation
         onPress={() => setSelected(null)}
-        onRegionChangeComplete={(r) => (regionRef.current = r)}>
+        onRegionChangeComplete={(r) => {
+          regionRef.current = r;
+          setRegion(r);
+        }}>
         {visible.map((pl) => {
           const colors = CATEGORY_COLORS[pl.category];
           if (pl.line) {
@@ -320,9 +347,47 @@ export default function MapScreen() {
             </Fragment>
           );
         })}
-        {visible
-          .filter((pl) => pinnedIds.has(pl.id))
-          .map((pl) => (
+        {clusters.map((c) => {
+          if (c.cluster) {
+            return (
+              <Marker
+                key={`c-${c.id}`}
+                coordinate={{ latitude: c.lat, longitude: c.lng }}
+                anchor={{ x: 0.5, y: 0.5 }}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  mapRef.current?.animateToRegion(
+                    expansionRegion(clusterIndex, c.id, c.lat, c.lng),
+                    400,
+                  );
+                }}>
+                <View style={[styles.clusterPin, { backgroundColor: p.accent, borderColor: p.card }]}>
+                  <Text style={[styles.clusterCount, { color: p.onAccent }]}>{c.count}</Text>
+                </View>
+              </Marker>
+            );
+          }
+          const pt = c.point;
+          if (pt.kind === 'event') {
+            const eventId = pt.id.replace(/^ev-/, '');
+            return (
+              <Marker
+                key={pt.id}
+                coordinate={{ latitude: pt.lat, longitude: pt.lng }}
+                anchor={{ x: 0.5, y: 1 }}
+                onPress={(e) => {
+                  e.stopPropagation();
+                  router.push(`/event/${eventId}`);
+                }}>
+                <View style={[styles.eventPin, { backgroundColor: p.accent, borderColor: p.card }]}>
+                  <Icon sf="pawprint.fill" size={14} color={p.onAccent} />
+                </View>
+              </Marker>
+            );
+          }
+          const pl = placeById.get(pt.id);
+          if (!pl) return null;
+          return (
             <Marker
               key={`m-${pl.id}`}
               coordinate={pl.center}
@@ -339,22 +404,8 @@ export default function MapScreen() {
                 <PawkLogo size={22} animated={false} />
               </View>
             </Marker>
-          ))}
-        {showEvents &&
-          eventItems.map(({ event }) => (
-            <Marker
-              key={`ev-${event.id}`}
-              coordinate={{ latitude: event.lat, longitude: event.lng }}
-              anchor={{ x: 0.5, y: 1 }}
-              onPress={(e) => {
-                e.stopPropagation();
-                router.push(`/event/${event.id}`);
-              }}>
-              <View style={[styles.eventPin, { backgroundColor: p.accent, borderColor: p.card }]}>
-                <Icon sf="pawprint.fill" size={14} color={p.onAccent} />
-              </View>
-            </Marker>
-          ))}
+          );
+        })}
       </MapView>
 
       <View style={[styles.topBars, { top: insets.top + 6 }]}>
@@ -748,6 +799,20 @@ const styles = StyleSheet.create({
     shadowRadius: 3,
     shadowOffset: { width: 0, height: 1 },
   },
+  clusterPin: {
+    minWidth: 34,
+    height: 34,
+    borderRadius: 17,
+    borderWidth: 2,
+    paddingHorizontal: 6,
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOpacity: 0.25,
+    shadowRadius: 3,
+    shadowOffset: { width: 0, height: 1 },
+  },
+  clusterCount: { fontSize: 14, fontWeight: '800' },
   legendWrap: { position: 'absolute', left: Spacing.three, alignItems: 'flex-start', gap: 8 },
   legendCard: { borderRadius: Radii.md, padding: Spacing.two, gap: 6, overflow: 'hidden' },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
