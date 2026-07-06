@@ -107,7 +107,7 @@ email/password is a placeholder for SSO. Milestone mapping lives in [SPEC.md §9
 - [ ] Optional: create a saved search from breed + area at the end
 
 ## EPIC 10 — Profiles & Badges  🟢
-- [~] Pet profile screen (photo, breed, size, temperament tags) — pets shown on the user profile (#27), real photo upload on add/edit (#29); dedicated standalone pet screen + temperament editing still TODO
+- [x] Pet profile screen (photo, breed, size, temperament tags) — pets shown on the user profile (#27), photo upload (#29), and editable temperament tags on add/edit (#40)
 - [ ] Achievement badges: First Meetup, Host, 5 Events, Breed Ambassador
 - [x] Tap attendee badge → mini profile — user profile screen from attendee strips, comment authors, and the event host (#27, #28), with report/block
 
