@@ -5,7 +5,7 @@ vi.mock('./supabase', () => ({
 }));
 
 import { supabase } from './supabase';
-import { fetchMyNotifications, notifyEventAttendees } from './use-notifications';
+import { fetchMyNotifications, markNotificationsRead, notifyEventAttendees } from './use-notifications';
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const auth = supabase.auth as any;
@@ -35,6 +35,21 @@ describe('fetchMyNotifications', () => {
     expect(out).toEqual([
       { id: 'n1', type: 'event_updated', message: 'Updated', eventId: 'e1', read: false, createdAt: 't1' },
     ]);
+  });
+});
+
+describe('markNotificationsRead', () => {
+  it('marks the user’s unread notifications read', async () => {
+    const eqRead = vi.fn().mockResolvedValue({ error: null });
+    const eqUser = vi.fn(() => ({ eq: eqRead }));
+    const update = vi.fn(() => ({ eq: eqUser }));
+    from.mockReturnValue({ update });
+
+    await markNotificationsRead();
+
+    expect(update).toHaveBeenCalledWith({ read: true });
+    expect(eqUser).toHaveBeenCalledWith('user_id', 'me');
+    expect(eqRead).toHaveBeenCalledWith('read', false);
   });
 });
 
