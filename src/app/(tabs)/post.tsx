@@ -27,6 +27,7 @@ import { offsetMi } from '@/lib/geo';
 import { searchAddresses, type AddressHit } from '@/lib/places';
 import { pickImage, uploadPublicImage } from '@/lib/storage';
 import { useCreateEvent, useUpdateEvent } from '@/lib/use-events';
+import { notifyEventAttendees } from '@/lib/use-notifications';
 import { useStore } from '@/lib/store';
 import {
   RECURRENCE_LABELS,
@@ -238,6 +239,12 @@ export default function PostScreen() {
           id: editingId,
           patch: { ...fields, lat: loc.lat, lng: loc.lng },
         });
+        // Let attendees know via in-app notification (best-effort).
+        await notifyEventAttendees(
+          editingId,
+          'event_updated',
+          `${fields.title} was updated — check the latest details.`,
+        ).catch(() => {});
         const id = editingId;
         setEditingId(null);
         setForm(freshForm());

@@ -10,6 +10,7 @@ import { BottomTabInset, Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { timeAgo } from '@/lib/dates';
 import { useStore } from '@/lib/store';
+import { useMarkNotificationsRead, useMyNotifications } from '@/lib/use-notifications';
 import { useHostPendingRequests, useHostRequestActions } from '@/lib/use-rsvps';
 import type { NotificationType, User } from '@/lib/types';
 
@@ -59,7 +60,48 @@ const TYPE_ICONS: Record<NotificationType, string> = {
   reply: 'arrowshape.turn.up.left.fill',
   waitlist_promoted: 'sparkles',
   event_cancelled: 'calendar.badge.exclamationmark',
+  event_updated: 'pencil.circle.fill',
 };
+
+// The signed-in user's real (Supabase) notifications.
+function SupabaseActivity() {
+  const p = usePalette();
+  const router = useRouter();
+  const { data: notifs = [] } = useMyNotifications();
+  const markRead = useMarkNotificationsRead();
+  if (notifs.length === 0) return null;
+  const hasUnread = notifs.some((n) => !n.read);
+  return (
+    <View style={styles.section}>
+      <View style={styles.activityHeader}>
+        <Text style={[styles.sectionLabel, { color: p.textSecondary }]}>ACTIVITY</Text>
+        {hasUnread ? (
+          <Chip small label="Mark all read" onPress={() => markRead.mutate()} />
+        ) : null}
+      </View>
+      {notifs.map((n) => (
+        <Pressable
+          key={n.id}
+          onPress={() => n.eventId && router.push(`/event/${n.eventId}`)}
+          style={({ pressed }) => [
+            styles.notifRow,
+            { backgroundColor: pressed ? p.cardPressed : 'transparent' },
+          ]}>
+          <View style={[styles.notifIcon, { backgroundColor: p.accentSoft }]}>
+            <Icon sf={TYPE_ICONS[n.type]} size={16} color={p.accent} />
+          </View>
+          <View style={{ flex: 1 }}>
+            <Text style={[styles.notifText, { color: p.text, fontWeight: n.read ? '400' : '700' }]}>
+              {n.message}
+            </Text>
+            <Text style={[styles.notifTime, { color: p.textSecondary }]}>{timeAgo(n.createdAt)}</Text>
+          </View>
+          {!n.read ? <View style={[styles.unreadDot, { backgroundColor: p.accent }]} /> : null}
+        </Pressable>
+      ))}
+    </View>
+  );
+}
 
 export default function InboxScreen() {
   const p = usePalette();
@@ -96,6 +138,7 @@ export default function InboxScreen() {
       <ScrollView
         contentContainerStyle={[styles.body, { paddingBottom: BottomTabInset + Spacing.four }]}>
         <SupabaseJoinRequests />
+        <SupabaseActivity />
         {requests.length > 0 ? (
           <View style={styles.section}>
             <Text style={[styles.sectionLabel, { color: p.textSecondary }]}>
@@ -190,6 +233,7 @@ const styles = StyleSheet.create({
   body: { padding: Spacing.three, gap: Spacing.four },
   section: { gap: Spacing.two },
   sectionLabel: { fontSize: 12, fontWeight: '700', letterSpacing: 0.8 },
+  activityHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
   card: {
     flexDirection: 'row',
     gap: Spacing.three,

@@ -96,7 +96,8 @@ export type NotificationType =
   | 'comment'
   | 'reply'
   | 'waitlist_promoted'
-  | 'event_cancelled';
+  | 'event_cancelled'
+  | 'event_updated';
 
 export interface AppNotification {
   id: string;
