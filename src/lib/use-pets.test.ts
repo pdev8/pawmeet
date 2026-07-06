@@ -26,7 +26,15 @@ describe('fetchMyPets', () => {
     auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
     const order = vi.fn().mockResolvedValue({
       data: [
-        { id: 'p1', owner_id: 'u1', name: 'Rex', breed: 'Lab', photo_url: 'http://x', size: 'L' },
+        {
+          id: 'p1',
+          owner_id: 'u1',
+          name: 'Rex',
+          breed: 'Lab',
+          photo_url: 'http://x',
+          size: 'L',
+          temperament_tags: ['friendly', 'goofy'],
+        },
       ],
       error: null,
     });
@@ -38,7 +46,15 @@ describe('fetchMyPets', () => {
     expect(from).toHaveBeenCalledWith('pets');
     expect(eq).toHaveBeenCalledWith('owner_id', 'u1');
     expect(pets).toEqual([
-      { id: 'p1', ownerId: 'u1', name: 'Rex', breed: 'Lab', photoUrl: 'http://x', size: 'L' },
+      {
+        id: 'p1',
+        ownerId: 'u1',
+        name: 'Rex',
+        breed: 'Lab',
+        photoUrl: 'http://x',
+        size: 'L',
+        temperament: ['friendly', 'goofy'],
+      },
     ]);
   });
 
@@ -103,7 +119,17 @@ describe('fetchPetsForOwners', () => {
 
   it('maps pets for the given owners', async () => {
     const inFn = vi.fn().mockResolvedValue({
-      data: [{ id: 'p1', owner_id: 'u1', name: 'Biscuit', breed: 'Corgi', photo_url: 'x.png', size: 'S' }],
+      data: [
+        {
+          id: 'p1',
+          owner_id: 'u1',
+          name: 'Biscuit',
+          breed: 'Corgi',
+          photo_url: 'x.png',
+          size: 'S',
+          temperament_tags: null,
+        },
+      ],
       error: null,
     });
     from.mockReturnValue({ select: vi.fn(() => ({ in: inFn })) });
@@ -111,7 +137,7 @@ describe('fetchPetsForOwners', () => {
     expect(from).toHaveBeenCalledWith('pets');
     expect(inFn).toHaveBeenCalledWith('owner_id', ['u1', 'u2']);
     expect(out).toEqual([
-      { id: 'p1', ownerId: 'u1', name: 'Biscuit', breed: 'Corgi', photoUrl: 'x.png', size: 'S' },
+      { id: 'p1', ownerId: 'u1', name: 'Biscuit', breed: 'Corgi', photoUrl: 'x.png', size: 'S', temperament: [] },
     ]);
   });
 });
