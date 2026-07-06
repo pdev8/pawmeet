@@ -33,6 +33,7 @@ import {
   spotsLeft,
   visibleAddress,
 } from '@/lib/selectors';
+import { addEventToCalendar } from '@/lib/calendar';
 import { useBlockedIds } from '@/lib/use-blocks';
 import { useEvent } from '@/lib/use-events';
 import { useReportContent } from '@/lib/use-reports';
@@ -556,6 +557,19 @@ export default function EventScreen() {
                 {fmtRange(event.startsAt, event.endsAt)}
               </Text>
             </View>
+            {event.status === 'active' ? (
+              <Pressable
+                onPress={() =>
+                  addEventToCalendar(event).catch((e) =>
+                    Alert.alert('Couldn’t open calendar', e instanceof Error ? e.message : 'Try again.'),
+                  )
+                }
+                style={styles.calendarBtn}
+                accessibilityRole="button">
+                <Icon sf="calendar.badge.plus" size={15} color={p.accent} />
+                <Text style={[styles.calendarBtnText, { color: p.accent }]}>Add to calendar</Text>
+              </Pressable>
+            ) : null}
             {event.recurrence ? (
               <View style={styles.infoRow}>
                 <Icon sf="repeat" size={17} color={p.accent} />
@@ -703,6 +717,8 @@ const styles = StyleSheet.create({
   title: { fontSize: 26, fontWeight: '800', fontFamily: Fonts?.rounded },
   infoRow: { flexDirection: 'row', gap: 10, alignItems: 'flex-start' },
   infoText: { fontSize: 15, fontWeight: '600', flexShrink: 1 },
+  calendarBtn: { flexDirection: 'row', alignItems: 'center', gap: 6, marginLeft: 27, marginTop: -2 },
+  calendarBtnText: { fontSize: 13, fontWeight: '700' },
   privacyNote: { fontSize: 12, marginTop: 2 },
   hostCard: {
     flexDirection: 'row',
