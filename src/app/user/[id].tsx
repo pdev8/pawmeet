@@ -2,8 +2,12 @@ import { Image } from 'expo-image';
 import { Stack, useLocalSearchParams, useRouter } from 'expo-router';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+
 import { Chip } from '@/components/chip';
 import { EmptyState } from '@/components/empty-state';
+import { Glass } from '@/components/glass';
+import { Icon } from '@/components/icon';
 import { Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { useBlockActions, useBlockedIds } from '@/lib/use-blocks';
@@ -17,6 +21,7 @@ const SIZE_LABELS: Record<PetSize, string> = { S: 'Small', M: 'Medium', L: 'Larg
 export default function UserProfileScreen() {
   const p = usePalette();
   const router = useRouter();
+  const insets = useSafeAreaInsets();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { data: profile, isLoading } = useUserProfile(id);
   const { data: myId } = useCurrentUserId();
@@ -56,9 +61,9 @@ export default function UserProfileScreen() {
     ]);
 
   return (
-    <ScrollView style={[styles.screen, { backgroundColor: p.background }]} contentContainerStyle={styles.body}>
-      <Stack.Screen options={{ title: name }} />
-
+    <View style={[styles.screen, { backgroundColor: p.background }]}>
+      <Stack.Screen options={{ headerShown: false }} />
+      <ScrollView contentContainerStyle={[styles.body, { paddingTop: insets.top + 52 }]}>
       {isLoading ? (
         <Text style={[styles.muted, { color: p.textSecondary }]}>Loading…</Text>
       ) : !profile ? (
@@ -111,13 +116,32 @@ export default function UserProfileScreen() {
           ) : null}
         </>
       )}
-    </ScrollView>
+      </ScrollView>
+
+      <Pressable
+        onPress={() => router.back()}
+        accessibilityLabel="Back"
+        style={[styles.backBtn, { top: insets.top + 6 }]}>
+        <Glass style={styles.backGlass}>
+          <Icon sf="chevron.left" size={17} color={p.text} />
+        </Glass>
+      </Pressable>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   screen: { flex: 1 },
   body: { padding: Spacing.four, gap: Spacing.three },
+  backBtn: { position: 'absolute', left: Spacing.three },
+  backGlass: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
   muted: { fontSize: 14, textAlign: 'center', marginTop: Spacing.five },
   header: { alignItems: 'center', gap: 6, marginBottom: Spacing.two },
   avatar: { width: 88, height: 88, borderRadius: 44 },
