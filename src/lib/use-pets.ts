@@ -83,8 +83,21 @@ export async function updatePet(id: string, patch: PetPatch): Promise<void> {
   if (error) throw error;
 }
 
+export async function deletePet(id: string): Promise<void> {
+  const { error } = await supabase.from('pets').delete().eq('id', id);
+  if (error) throw error;
+}
+
 export function useMyPets() {
   return useQuery({ queryKey: ['pets'], queryFn: fetchMyPets });
+}
+
+export function useDeletePet() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: (id: string) => deletePet(id),
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['pets'] }),
+  });
 }
 
 export function usePetsForOwners(ownerIds: string[]) {

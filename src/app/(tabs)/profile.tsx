@@ -19,6 +19,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Chip } from '@/components/chip';
 import { EventRow } from '@/components/event-row';
+import { SwipeableRow } from '@/components/swipeable-row';
 import { Icon } from '@/components/icon';
 import { BottomTabInset, Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
@@ -26,7 +27,7 @@ import { deleteAccount, signOut } from '@/lib/auth';
 import { BREEDS, DEFAULT_BREED, TEMPERAMENTS } from '@/lib/breeds';
 import { useBlockActions, useBlockedList } from '@/lib/use-blocks';
 import { pickImage, uploadPublicImage } from '@/lib/storage';
-import { useAddPet, useMyPets, useUpdatePet } from '@/lib/use-pets';
+import { useAddPet, useDeletePet, useMyPets, useUpdatePet } from '@/lib/use-pets';
 import { useProfile, useUpdateProfile } from '@/lib/use-profile';
 import {
   hostedEvents,
@@ -96,6 +97,20 @@ export default function ProfileScreen() {
   const blockActions = useBlockActions();
   const addPet = useAddPet();
   const updatePet = useUpdatePet();
+  const deletePet = useDeletePet();
+
+  const openPetEdit = (pet: Pet) => {
+    closeDropdowns();
+    setPetForm({
+      petId: pet.id,
+      name: pet.name,
+      breed: pet.breed,
+      size: pet.size,
+      photoUrl: pet.photoUrl,
+      temperament: pet.temperament ?? [],
+    });
+  };
+
   const me = store.users[store.currentUserId];
   const upcoming = myUpcomingEvents(store);
   const hostedActive = hostedEvents(store, 'active');
@@ -268,31 +283,32 @@ export default function ProfileScreen() {
             />
           }>
           {pets.map((pet: Pet) => (
-            <Pressable
+            <SwipeableRow
               key={pet.id}
-              onPress={() => {
-                closeDropdowns();
-                setPetForm({ petId: pet.id, name: pet.name, breed: pet.breed, size: pet.size, photoUrl: pet.photoUrl, temperament: pet.temperament ?? [] });
-              }}
-              style={[styles.petRow, { backgroundColor: p.card, borderColor: p.separator }]}>
-              <Image source={{ uri: pet.photoUrl }} style={styles.petPhoto} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.petName, { color: p.text }]}>{pet.name}</Text>
-                <Text style={[styles.petMeta, { color: p.textSecondary }]}>
-                  {pet.breed} · size {pet.size}
-                </Text>
-                {pet.temperament && pet.temperament.length > 0 ? (
-                  <View style={styles.petTags}>
-                    {pet.temperament.map((t) => (
-                      <View key={t} style={[styles.petTag, { backgroundColor: p.chipBg }]}>
-                        <Text style={[styles.petTagText, { color: p.textSecondary }]}>{t}</Text>
-                      </View>
-                    ))}
-                  </View>
-                ) : null}
+              onPress={() => openPetEdit(pet)}
+              onDelete={() => deletePet.mutate(pet.id)}
+              confirmTitle={`Remove ${pet.name}?`}
+              confirmMessage="This deletes your pet from your profile.">
+              <View style={[styles.petRow, { backgroundColor: p.card, borderColor: p.separator }]}>
+                <Image source={{ uri: pet.photoUrl }} style={styles.petPhoto} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.petName, { color: p.text }]}>{pet.name}</Text>
+                  <Text style={[styles.petMeta, { color: p.textSecondary }]}>
+                    {pet.breed} · size {pet.size}
+                  </Text>
+                  {pet.temperament && pet.temperament.length > 0 ? (
+                    <View style={styles.petTags}>
+                      {pet.temperament.map((t) => (
+                        <View key={t} style={[styles.petTag, { backgroundColor: p.chipBg }]}>
+                          <Text style={[styles.petTagText, { color: p.textSecondary }]}>{t}</Text>
+                        </View>
+                      ))}
+                    </View>
+                  ) : null}
+                </View>
+                <Icon sf="pencil" size={14} color={p.textSecondary} />
               </View>
-              <Icon sf="pencil" size={14} color={p.textSecondary} />
-            </Pressable>
+            </SwipeableRow>
           ))}
         </Section>
 
