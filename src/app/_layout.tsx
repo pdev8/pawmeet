@@ -57,7 +57,7 @@ export default function RootLayout() {
         ) : session ? (
           <Stack>
             <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
-            <Stack.Screen name="event/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="event/[id]" options={{ headerShown: false, title: 'Event' }} />
             <Stack.Screen
               name="map"
               options={{ headerShown: false, presentation: 'fullScreenModal' }}
@@ -66,8 +66,8 @@ export default function RootLayout() {
               name="guidelines"
               options={{ title: 'Community Guidelines', presentation: 'modal' }}
             />
-            <Stack.Screen name="user/[id]" options={{ headerShown: true, title: 'Profile' }} />
-            <Stack.Screen name="manage/[id]" options={{ headerShown: true, title: 'Manage event' }} />
+            <Stack.Screen name="user/[id]" options={{ headerShown: false }} />
+            <Stack.Screen name="manage/[id]" options={{ headerShown: false }} />
           </Stack>
         ) : (
           <AuthScreen />

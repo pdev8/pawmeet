@@ -53,9 +53,6 @@ export function EventCard({
         <View style={styles.coverChips}>
           <Chip small label={VENUE_LABELS[event.venueType]} sf={VENUE_ICONS[event.venueType]} />
           {event.breedFocus ? <Chip small label={event.breedFocus} sf="pawprint.fill" /> : null}
-          {event.recurrence ? (
-            <Chip small label={RECURRENCE_LABELS[event.recurrence]} sf="repeat" />
-          ) : null}
         </View>
         <Pressable
           onPress={() => useStore.getState().toggleFavorite(event.id)}
@@ -69,11 +66,16 @@ export function EventCard({
             color={favorite ? p.accent : '#fff'}
           />
         </Pressable>
-        {left !== null && left <= 0 ? (
-          <View style={[styles.fullTag, { backgroundColor: p.overlay }]}>
-            <Text style={styles.fullTagText}>Full · waitlist open</Text>
-          </View>
-        ) : null}
+        <View style={styles.coverBottomLeft}>
+          {left !== null && left <= 0 ? (
+            <View style={[styles.fullTag, { backgroundColor: p.overlay }]}>
+              <Text style={styles.fullTagText}>Full · waitlist open</Text>
+            </View>
+          ) : null}
+          {event.recurrence ? (
+            <Chip small label={RECURRENCE_LABELS[event.recurrence]} sf="repeat" />
+          ) : null}
+        </View>
       </View>
 
       <View style={styles.body}>
@@ -112,6 +114,8 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: Spacing.three,
     left: Spacing.three,
+    // Stop before the heart button (34 + gap) so top chips never sit under it.
+    right: Spacing.three + 34 + 8,
     flexDirection: 'row',
     gap: 6,
   },
@@ -125,10 +129,15 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  fullTag: {
+  coverBottomLeft: {
     position: 'absolute',
     bottom: Spacing.two,
     left: Spacing.three,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  fullTag: {
     paddingHorizontal: 10,
     paddingVertical: 4,
     borderRadius: Radii.sm,

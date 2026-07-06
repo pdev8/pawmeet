@@ -9,6 +9,8 @@ export interface EventRsvp {
   status: RsvpStatus;
   name?: string;
   avatar?: string | null;
+  petName?: string;
+  petPhoto?: string | null;
 }
 
 /** Whether a "going" RSVP fits under capacity, or must go on the waitlist. */
@@ -33,26 +35,36 @@ async function currentUserId(): Promise<string> {
   return user.id;
 }
 
+interface DbProfileWithPet {
+  display_name: string;
+  avatar_url: string | null;
+  pets: { name: string; photo_url: string | null }[] | null;
+}
 interface DbRsvp {
   id: string;
   user_id: string;
   status: RsvpStatus;
-  profiles: { display_name: string; avatar_url: string | null } | null;
+  profiles: DbProfileWithPet | null;
 }
 
 export async function fetchEventRsvps(eventId: string): Promise<EventRsvp[]> {
   const { data, error } = await supabase
     .from('rsvps')
-    .select('id, user_id, status, profiles(display_name, avatar_url)')
+    .select('id, user_id, status, profiles(display_name, avatar_url, pets(name, photo_url))')
     .eq('event_id', eventId);
   if (error) throw error;
-  return (data as unknown as DbRsvp[]).map((r) => ({
-    id: r.id,
-    userId: r.user_id,
-    status: r.status,
-    name: r.profiles?.display_name,
-    avatar: r.profiles?.avatar_url ?? null,
-  }));
+  return (data as unknown as DbRsvp[]).map((r) => {
+    const pet = r.profiles?.pets?.[0];
+    return {
+      id: r.id,
+      userId: r.user_id,
+      status: r.status,
+      name: r.profiles?.display_name,
+      avatar: r.profiles?.avatar_url ?? null,
+      petName: pet?.name,
+      petPhoto: pet?.photo_url ?? null,
+    };
+  });
 }
 
 /** Tally going RSVPs per event id from a flat rows list. */
@@ -62,6 +74,45 @@ export function tallyGoing(rows: { event_id: string; status: RsvpStatus }[]): Re
     if (r.status === 'going') counts[r.event_id] = (counts[r.event_id] ?? 0) + 1;
   }
   return counts;
+}
+
+export interface GoingAttendee {
+  userId: string;
+  name: string;
+  avatar: string | null;
+  petName?: string;
+  petPhoto?: string | null;
+}
+
+interface DbGoingRow {
+  event_id: string;
+  user_id: string;
+  profiles: DbProfileWithPet | null;
+}
+
+/** Going attendees (with profile + first pet) grouped by event id, for card badges. */
+export async function fetchGoingAttendees(
+  eventIds: string[],
+): Promise<Record<string, GoingAttendee[]>> {
+  if (eventIds.length === 0) return {};
+  const { data, error } = await supabase
+    .from('rsvps')
+    .select('event_id, user_id, profiles(display_name, avatar_url, pets(name, photo_url))')
+    .in('event_id', eventIds)
+    .eq('status', 'going');
+  if (error) throw error;
+  const out: Record<string, GoingAttendee[]> = {};
+  for (const r of data as unknown as DbGoingRow[]) {
+    const pet = r.profiles?.pets?.[0];
+    (out[r.event_id] ??= []).push({
+      userId: r.user_id,
+      name: r.profiles?.display_name ?? 'Someone',
+      avatar: r.profiles?.avatar_url ?? null,
+      petName: pet?.name,
+      petPhoto: pet?.photo_url ?? null,
+    });
+  }
+  return out;
 }
 
 /** Going counts keyed by event id, for a batch of events (empty in → empty out). */

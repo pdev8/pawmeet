@@ -290,7 +290,12 @@ export default function DiscoverScreen() {
           data={items}
           keyExtractor={(it) => it.event.id}
           renderItem={({ item }) => (
-            <EventCard event={item.event} distanceMi={item.distanceMi} goingCount={item.goingCount} />
+            <EventCard
+              event={item.event}
+              distanceMi={item.distanceMi}
+              goingCount={item.goingCount}
+              badges={item.badges}
+            />
           )}
           onScroll={Animated.event(
             [{ nativeEvent: { contentOffset: { y: scrollY } } }],

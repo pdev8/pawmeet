@@ -41,6 +41,7 @@ export interface Pet {
   breed: string;
   photoUrl: string;
   size: PetSize;
+  temperament?: string[];
 }
 
 export interface PetEvent {

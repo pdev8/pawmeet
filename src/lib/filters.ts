@@ -1,6 +1,6 @@
 import { addDays } from './dates';
 import { distanceMi } from './geo';
-import { goingRsvps, spotsLeft } from './selectors';
+import { goingRsvps, spotsLeft, type AttendeeBadge } from './selectors';
 import type { LatLng, Pet, PetEvent, Rsvp, User, VenueType } from './types';
 
 export type DateWindow = 'today' | 'weekend' | '7d' | '30d';
@@ -71,6 +71,7 @@ export interface DiscoveryItem {
   event: PetEvent;
   distanceMi: number;
   goingCount: number;
+  badges?: AttendeeBadge[];
 }
 
 export function discoverEvents(

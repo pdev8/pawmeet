@@ -23,7 +23,7 @@ import { Icon } from '@/components/icon';
 import { BottomTabInset, Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { deleteAccount, signOut } from '@/lib/auth';
-import { BREEDS } from '@/lib/breeds';
+import { BREEDS, TEMPERAMENTS } from '@/lib/breeds';
 import { useBlockActions, useBlockedList } from '@/lib/use-blocks';
 import { pickImage, uploadPublicImage } from '@/lib/storage';
 import { useAddPet, useMyPets, useUpdatePet } from '@/lib/use-pets';
@@ -44,6 +44,7 @@ interface PetForm {
   breed: string;
   size: PetSize;
   photoUrl?: string;
+  temperament: string[];
 }
 
 // LayoutAnimation needs a one-time opt-in on Android; a no-op on iOS.
@@ -171,10 +172,22 @@ export default function ProfileScreen() {
     if (petForm.petId) {
       updatePet.mutate({
         id: petForm.petId,
-        patch: { name, breed: petForm.breed, size: petForm.size, photoUrl: petForm.photoUrl },
+        patch: {
+          name,
+          breed: petForm.breed,
+          size: petForm.size,
+          photoUrl: petForm.photoUrl,
+          temperament: petForm.temperament,
+        },
       });
     } else {
-      addPet.mutate({ name, breed: petForm.breed, size: petForm.size, photoUrl: petForm.photoUrl });
+      addPet.mutate({
+        name,
+        breed: petForm.breed,
+        size: petForm.size,
+        photoUrl: petForm.photoUrl,
+        temperament: petForm.temperament,
+      });
     }
     setPetForm(null);
   };
@@ -240,14 +253,14 @@ export default function ProfileScreen() {
             <Chip
               small
               label="Add pet"
-              onPress={() => setPetForm({ name: '', breed: BREEDS[0], size: 'M' })}
+              onPress={() => setPetForm({ name: '', breed: BREEDS[0], size: 'M', temperament: [] })}
             />
           }>
           {pets.map((pet: Pet) => (
             <Pressable
               key={pet.id}
               onPress={() =>
-                setPetForm({ petId: pet.id, name: pet.name, breed: pet.breed, size: pet.size, photoUrl: pet.photoUrl })
+                setPetForm({ petId: pet.id, name: pet.name, breed: pet.breed, size: pet.size, photoUrl: pet.photoUrl, temperament: pet.temperament ?? [] })
               }
               style={[styles.petRow, { backgroundColor: p.card, borderColor: p.separator }]}>
               <Image source={{ uri: pet.photoUrl }} style={styles.petPhoto} />
@@ -256,6 +269,15 @@ export default function ProfileScreen() {
                 <Text style={[styles.petMeta, { color: p.textSecondary }]}>
                   {pet.breed} · size {pet.size}
                 </Text>
+                {pet.temperament && pet.temperament.length > 0 ? (
+                  <View style={styles.petTags}>
+                    {pet.temperament.map((t) => (
+                      <View key={t} style={[styles.petTag, { backgroundColor: p.chipBg }]}>
+                        <Text style={[styles.petTagText, { color: p.textSecondary }]}>{t}</Text>
+                      </View>
+                    ))}
+                  </View>
+                ) : null}
               </View>
               <Icon sf="pencil" size={14} color={p.textSecondary} />
             </Pressable>
@@ -504,6 +526,31 @@ export default function ProfileScreen() {
                 />
               ))}
             </View>
+            <Text style={[styles.modalFieldLabel, { color: p.textSecondary }]}>TEMPERAMENT</Text>
+            <ScrollView style={{ maxHeight: 120 }}>
+              <View style={styles.breedWrap}>
+                {TEMPERAMENTS.map((t) => (
+                  <Chip
+                    key={t}
+                    small
+                    label={t}
+                    selected={petForm?.temperament.includes(t)}
+                    onPress={() =>
+                      setPetForm((f) =>
+                        f
+                          ? {
+                              ...f,
+                              temperament: f.temperament.includes(t)
+                                ? f.temperament.filter((x) => x !== t)
+                                : [...f.temperament, t],
+                            }
+                          : f,
+                      )
+                    }
+                  />
+                ))}
+              </View>
+            </ScrollView>
             <View style={styles.modalActions}>
               <Chip label="Cancel" onPress={() => setPetForm(null)} />
               <Chip label="Save" selected onPress={savePet} />
@@ -563,6 +610,9 @@ const styles = StyleSheet.create({
   petPhoto: { width: 52, height: 52, borderRadius: 26 },
   petName: { fontSize: 16, fontWeight: '700' },
   petMeta: { fontSize: 13 },
+  petTags: { flexDirection: 'row', flexWrap: 'wrap', gap: 5, marginTop: 5 },
+  petTag: { paddingHorizontal: 8, paddingVertical: 3, borderRadius: 999 },
+  petTagText: { fontSize: 11, fontWeight: '700' },
   reset: { fontSize: 14, fontWeight: '700', textAlign: 'center' },
   blockedRow: {
     flexDirection: 'row',
@@ -605,6 +655,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   breedWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
+  modalFieldLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginTop: 4 },
   sizeRow: { flexDirection: 'row', gap: 8 },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
 });

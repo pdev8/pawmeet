@@ -61,7 +61,11 @@ describe('fetchEventRsvps', () => {
           id: 'r1',
           user_id: 'u1',
           status: 'going',
-          profiles: { display_name: 'Sam', avatar_url: 'a.png' },
+          profiles: {
+            display_name: 'Sam',
+            avatar_url: 'a.png',
+            pets: [{ name: 'Biscuit', photo_url: 'b.png' }],
+          },
         },
       ],
       error: null,
@@ -71,7 +75,15 @@ describe('fetchEventRsvps', () => {
     expect(from).toHaveBeenCalledWith('rsvps');
     expect(eq).toHaveBeenCalledWith('event_id', 'e1');
     expect(out).toEqual([
-      { id: 'r1', userId: 'u1', status: 'going', name: 'Sam', avatar: 'a.png' },
+      {
+        id: 'r1',
+        userId: 'u1',
+        status: 'going',
+        name: 'Sam',
+        avatar: 'a.png',
+        petName: 'Biscuit',
+        petPhoto: 'b.png',
+      },
     ]);
   });
 
@@ -139,6 +151,35 @@ describe('cancelMyRsvp', () => {
   it('throws when signed out', async () => {
     auth.getUser.mockResolvedValue({ data: { user: null } });
     await expect(cancelMyRsvp('e1')).rejects.toThrow('Not signed in');
+  });
+});
+
+describe('fetchGoingAttendees', () => {
+  it('short-circuits on an empty id list', async () => {
+    const { fetchGoingAttendees } = await import('./use-rsvps');
+    expect(await fetchGoingAttendees([])).toEqual({});
+    expect(from).not.toHaveBeenCalled();
+  });
+
+  it('groups going attendees (with profile) by event id', async () => {
+    const { fetchGoingAttendees } = await import('./use-rsvps');
+    const eq = vi.fn().mockResolvedValue({
+      data: [
+        {
+          event_id: 'e1',
+          user_id: 'u1',
+          profiles: { display_name: 'Sam', avatar_url: 'a.png', pets: [{ name: 'Rex', photo_url: 'r.png' }] },
+        },
+        { event_id: 'e1', user_id: 'u2', profiles: { display_name: 'Mia', avatar_url: null, pets: [] } },
+        { event_id: 'e2', user_id: 'u3', profiles: null },
+      ],
+      error: null,
+    });
+    from.mockReturnValue({ select: vi.fn(() => ({ in: vi.fn(() => ({ eq })) })) });
+    const out = await fetchGoingAttendees(['e1', 'e2']);
+    expect(out.e1).toHaveLength(2);
+    expect(out.e1[0]).toEqual({ userId: 'u1', name: 'Sam', avatar: 'a.png', petName: 'Rex', petPhoto: 'r.png' });
+    expect(out.e2[0]).toMatchObject({ userId: 'u3', name: 'Someone', avatar: null, petPhoto: null });
   });
 });
 

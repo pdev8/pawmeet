@@ -10,9 +10,10 @@ interface DbPet {
   breed: string;
   photo_url: string | null;
   size: PetSize;
+  temperament_tags: string[] | null;
 }
 
-type PetInput = { name: string; breed: string; size: PetSize; photoUrl?: string };
+type PetInput = { name: string; breed: string; size: PetSize; photoUrl?: string; temperament?: string[] };
 type PetPatch = Partial<PetInput>;
 
 function toPet(row: DbPet): Pet {
@@ -23,6 +24,7 @@ function toPet(row: DbPet): Pet {
     breed: row.breed,
     photoUrl: row.photo_url ?? '',
     size: row.size,
+    temperament: row.temperament_tags ?? [],
   };
 }
 
@@ -34,7 +36,7 @@ export async function fetchMyPets(): Promise<Pet[]> {
   if (!user) return [];
   const { data, error } = await supabase
     .from('pets')
-    .select('id, owner_id, name, breed, photo_url, size')
+    .select('id, owner_id, name, breed, photo_url, size, temperament_tags')
     .eq('owner_id', user.id)
     .order('created_at');
   if (error) throw error;
@@ -46,7 +48,7 @@ export async function fetchPetsForOwners(ownerIds: string[]): Promise<Pet[]> {
   if (ownerIds.length === 0) return [];
   const { data, error } = await supabase
     .from('pets')
-    .select('id, owner_id, name, breed, photo_url, size')
+    .select('id, owner_id, name, breed, photo_url, size, temperament_tags')
     .in('owner_id', ownerIds);
   if (error) throw error;
   return (data as DbPet[]).map(toPet);
@@ -62,6 +64,7 @@ export async function addPet(input: PetInput): Promise<void> {
     name: input.name,
     breed: input.breed,
     size: input.size,
+    temperament_tags: input.temperament ?? [],
     // A picked-and-uploaded photo, else a placeholder from placedog.net.
     photo_url:
       input.photoUrl ?? `https://placedog.net/300/300?id=${60 + Math.floor(Math.random() * 40)}`,
@@ -75,6 +78,7 @@ export async function updatePet(id: string, patch: PetPatch): Promise<void> {
   if (patch.breed !== undefined) row.breed = patch.breed;
   if (patch.size !== undefined) row.size = patch.size;
   if (patch.photoUrl !== undefined) row.photo_url = patch.photoUrl;
+  if (patch.temperament !== undefined) row.temperament_tags = patch.temperament;
   const { error } = await supabase.from('pets').update(row).eq('id', id);
   if (error) throw error;
 }
