@@ -58,3 +58,32 @@ describe('expansionRegion', () => {
     expect(r.longitudeDelta).toBeLessThan(wide.longitudeDelta);
   });
 });
+
+describe('pointDisplays', () => {
+  it('marks close points as a single leader + members at the centroid when zoomed out', async () => {
+    const { pointDisplays } = await import('./cluster');
+    const index = buildIndex(oc);
+    const map = pointDisplays(index, oc, {
+      latitude: 33.68, longitude: -117.83, latitudeDelta: 2, longitudeDelta: 2,
+    });
+    const roles = oc.map((pt) => map.get(pt.id)!.role);
+    expect(roles.filter((r) => r === 'leader')).toHaveLength(1);
+    expect(roles.filter((r) => r === 'member')).toHaveLength(2);
+    // all members slide to the same centroid as the leader
+    const targets = new Set(oc.map((pt) => `${map.get(pt.id)!.target.lat},${map.get(pt.id)!.target.lng}`));
+    expect(targets.size).toBe(1);
+  });
+
+  it('marks each point standalone at its own spot when zoomed in', async () => {
+    const { pointDisplays } = await import('./cluster');
+    const index = buildIndex(oc);
+    const map = pointDisplays(index, oc, {
+      latitude: 33.68, longitude: -117.83, latitudeDelta: 0.002, longitudeDelta: 0.002,
+    });
+    for (const pt of oc) {
+      const d = map.get(pt.id)!;
+      expect(d.role).toBe('standalone');
+      expect(d.target).toEqual({ lat: pt.lat, lng: pt.lng });
+    }
+  });
+});
