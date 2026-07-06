@@ -141,3 +141,17 @@ describe('fetchPetsForOwners', () => {
     ]);
   });
 });
+
+describe('deletePet', () => {
+  it('deletes a pet by id and throws on error', async () => {
+    const { deletePet } = await import('./use-pets');
+    const eqOk = vi.fn().mockResolvedValue({ error: null });
+    from.mockReturnValue({ delete: vi.fn(() => ({ eq: eqOk })) });
+    await deletePet('p1');
+    expect(from).toHaveBeenCalledWith('pets');
+    expect(eqOk).toHaveBeenCalledWith('id', 'p1');
+
+    from.mockReturnValue({ delete: () => ({ eq: vi.fn().mockResolvedValue({ error: new Error('no') }) }) });
+    await expect(deletePet('p1')).rejects.toThrow('no');
+  });
+});
