@@ -4,6 +4,7 @@ import { Fragment, useEffect, useMemo, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Easing,
   Keyboard,
   KeyboardAvoidingView,
   Linking,
@@ -15,7 +16,13 @@ import {
   TextInput,
   View,
 } from 'react-native';
-import MapView, { Marker, Polygon, Polyline, type Region } from 'react-native-maps';
+import MapView, {
+  AnimatedRegion,
+  MarkerAnimated,
+  Polygon,
+  Polyline,
+  type Region,
+} from 'react-native-maps';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Chip } from '@/components/chip';
@@ -24,6 +31,7 @@ import { Icon } from '@/components/icon';
 import { PawkLogo } from '@/components/logo';
 import { Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
+import { fmtTime, relDay } from '@/lib/dates';
 import { crosshatch } from '@/lib/hatch';
 import {
   CATEGORY_LABELS,
@@ -41,7 +49,7 @@ import {
   useUpdatePlaceReview,
 } from '@/lib/use-place-reviews';
 import { blendedRating, mergeReviews, stars } from '@/lib/reviews';
-import { buildIndex, clustersFor, expansionRegion, type ClusterPoint } from '@/lib/cluster';
+import { buildIndex, pointDisplays, type ClusterPoint } from '@/lib/cluster';
 import { DEFAULT_FILTERS } from '@/lib/filters';
 import { pickImage, uploadPublicImage } from '@/lib/storage';
 import { useDiscoverEvents } from '@/lib/use-events';
@@ -187,6 +195,12 @@ export default function MapScreen() {
   // Cluster the point markers (pinned places + event pins) by the live region.
   const [region, setRegion] = useState<Region>(initialRegion);
   const placeById = useMemo(() => new Map(visible.map((pl) => [pl.id, pl])), [visible]);
+  const eventById = useMemo(
+    () => new Map(eventItems.map(({ event }) => [event.id, event])),
+    [eventItems],
+  );
+  // The points inside a tapped cluster, shown as a list card.
+  const [clusterItems, setClusterItems] = useState<ClusterPoint[] | null>(null);
   const clusterPoints = useMemo<ClusterPoint[]>(() => {
     const pts: ClusterPoint[] = [];
     for (const pl of visible) {
@@ -202,10 +216,47 @@ export default function MapScreen() {
     return pts;
   }, [visible, pinnedIds, showEvents, eventItems]);
   const clusterIndex = useMemo(() => buildIndex(clusterPoints), [clusterPoints]);
-  const clusters = useMemo(
-    () => clustersFor(clusterIndex, clusterPoints, region),
+  const displays = useMemo(
+    () => pointDisplays(clusterIndex, clusterPoints, region),
     [clusterIndex, clusterPoints, region],
   );
+
+  // One persistent AnimatedRegion per point; markers stay mounted and slide to
+  // their target (own spot or cluster centroid) so clustering reads as a drag.
+  const coords = useRef(new Map<string, AnimatedRegion>()).current;
+  const coordFor = (id: string, lat: number, lng: number) => {
+    let c = coords.get(id);
+    if (!c) {
+      c = new AnimatedRegion({ latitude: lat, longitude: lng, latitudeDelta: 0, longitudeDelta: 0 });
+      coords.set(id, c);
+    }
+    return c;
+  };
+  // Markers re-snapshot their view only during a short window after clustering
+  // changes (content swaps: count, pin↔bubble), then freeze — otherwise
+  // tracksViewChanges stays on and every marker redraws each frame (the flicker).
+  const [tracking, setTracking] = useState(true);
+  useEffect(() => {
+    setTracking(true);
+    // Glide the coordinates; the position animation is native (no per-frame JS).
+    displays.forEach((d, id) => {
+      const c = coords.get(id);
+      if (!c) return;
+      // rn-maps' AnimatedRegion.timing type is quirky; the runtime just wants the region + duration.
+      c.timing({
+        latitude: d.target.lat,
+        longitude: d.target.lng,
+        latitudeDelta: 0,
+        longitudeDelta: 0,
+        duration: 450,
+        easing: Easing.inOut(Easing.cubic),
+        useNativeDriver: false,
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      } as any).start();
+    });
+    const t = setTimeout(() => setTracking(false), 550);
+    return () => clearTimeout(t);
+  }, [displays, coords]);
 
   const reviewers = useMemo(
     () =>
@@ -305,7 +356,10 @@ export default function MapScreen() {
         style={StyleSheet.absoluteFill}
         initialRegion={initialRegion}
         showsUserLocation
-        onPress={() => setSelected(null)}
+        onPress={() => {
+          setSelected(null);
+          setClusterItems(null);
+        }}
         onRegionChangeComplete={(r) => {
           regionRef.current = r;
           setRegion(r);
@@ -347,52 +401,76 @@ export default function MapScreen() {
             </Fragment>
           );
         })}
-        {clusters.map((c) => {
-          if (c.cluster) {
+        {clusterPoints.map((pt) => {
+          const d = displays.get(pt.id);
+          if (!d) return null;
+          const coordinate = coordFor(pt.id, d.target.lat, d.target.lng);
+
+          if (d.role === 'member') {
+            // Stacked under the leader at the centroid; invisible + non-interactive,
+            // but still slides so it "peels off" when the cluster expands.
             return (
-              <Marker
-                key={`c-${c.id}`}
-                coordinate={{ latitude: c.lat, longitude: c.lng }}
+              <MarkerAnimated
+                key={pt.id}
+                coordinate={coordinate}
                 anchor={{ x: 0.5, y: 0.5 }}
-                onPress={(e) => {
-                  e.stopPropagation();
-                  mapRef.current?.animateToRegion(
-                    expansionRegion(clusterIndex, c.id, c.lat, c.lng),
-                    400,
-                  );
-                }}>
-                <View style={[styles.clusterPin, { backgroundColor: p.accent, borderColor: p.card }]}>
-                  <Text style={[styles.clusterCount, { color: p.onAccent }]}>{c.count}</Text>
-                </View>
-              </Marker>
+                opacity={0}
+                tracksViewChanges={false}
+                pointerEvents="none"
+              />
             );
           }
-          const pt = c.point;
+
+          if (d.role === 'leader') {
+            return (
+              <MarkerAnimated
+                key={pt.id}
+                coordinate={coordinate}
+                anchor={{ x: 0.5, y: 0.5 }}
+                tracksViewChanges={tracking}
+                onPress={(e: { stopPropagation: () => void }) => {
+                  e.stopPropagation();
+                  const leaves = clusterIndex
+                    .getLeaves(d.clusterId as number, Infinity)
+                    .map((f) => (f.properties as { pt: ClusterPoint }).pt);
+                  setSelected(null);
+                  setClusterItems(leaves);
+                }}>
+                <View style={[styles.clusterPin, { backgroundColor: p.accent, borderColor: p.card }]}>
+                  <Text style={[styles.clusterCount, { color: p.onAccent }]}>{d.count}</Text>
+                </View>
+              </MarkerAnimated>
+            );
+          }
+
           if (pt.kind === 'event') {
             const eventId = pt.id.replace(/^ev-/, '');
             return (
-              <Marker
+              <MarkerAnimated
                 key={pt.id}
-                coordinate={{ latitude: pt.lat, longitude: pt.lng }}
+                coordinate={coordinate}
                 anchor={{ x: 0.5, y: 1 }}
-                onPress={(e) => {
+                tracksViewChanges={tracking}
+                onPress={(e: { stopPropagation: () => void }) => {
                   e.stopPropagation();
                   router.push(`/event/${eventId}`);
                 }}>
                 <View style={[styles.eventPin, { backgroundColor: p.accent, borderColor: p.card }]}>
                   <Icon sf="pawprint.fill" size={14} color={p.onAccent} />
                 </View>
-              </Marker>
+              </MarkerAnimated>
             );
           }
+
           const pl = placeById.get(pt.id);
           if (!pl) return null;
           return (
-            <Marker
-              key={`m-${pl.id}`}
-              coordinate={pl.center}
+            <MarkerAnimated
+              key={pt.id}
+              coordinate={coordinate}
               anchor={{ x: 0.5, y: 0.5 }}
-              onPress={(e) => {
+              tracksViewChanges={tracking}
+              onPress={(e: { stopPropagation: () => void }) => {
                 e.stopPropagation();
                 setSelected(pl);
               }}>
@@ -403,7 +481,7 @@ export default function MapScreen() {
                 ]}>
                 <PawkLogo size={22} animated={false} />
               </View>
-            </Marker>
+            </MarkerAnimated>
           );
         })}
       </MapView>
@@ -485,6 +563,18 @@ export default function MapScreen() {
         pointerEvents="box-none">
         {selected ? (
           <Glass style={styles.sheet}>
+            {clusterItems ? (
+              <Pressable
+                onPress={() => setSelected(null)}
+                hitSlop={6}
+                accessibilityLabel="Back to the list"
+                style={styles.backToList}>
+                <Icon sf="chevron.left" size={13} color={p.accent} />
+                <Text style={[styles.backToListText, { color: p.accent }]}>
+                  All {clusterItems.length} spots here
+                </Text>
+              </Pressable>
+            ) : null}
             <View style={styles.sheetHeader}>
               <View style={{ flex: 1 }}>
                 <Text style={[styles.sheetTitle, { color: p.text }]} numberOfLines={2}>
@@ -504,7 +594,12 @@ export default function MapScreen() {
                   ) : null}
                 </Text>
               </View>
-              <Pressable onPress={() => setSelected(null)} accessibilityLabel="Close details">
+              <Pressable
+                onPress={() => {
+                  setSelected(null);
+                  setClusterItems(null);
+                }}
+                accessibilityLabel="Close details">
                 <Icon sf="xmark.circle.fill" size={24} color={p.textSecondary} />
               </Pressable>
             </View>
@@ -669,6 +764,96 @@ export default function MapScreen() {
               ) : null}
             </View>
           </Glass>
+        ) : clusterItems ? (
+          (() => {
+            const evs = clusterItems
+              .filter((pt) => pt.kind === 'event')
+              .map((pt) => eventById.get(pt.id.replace(/^ev-/, '')))
+              .filter((e): e is NonNullable<typeof e> => !!e);
+            const pls = clusterItems
+              .filter((pt) => pt.kind === 'place')
+              .map((pt) => placeById.get(pt.id))
+              .filter((pl): pl is NonNullable<typeof pl> => !!pl);
+            const total = evs.length + pls.length;
+            return (
+              <Glass style={styles.sheet}>
+                <View style={styles.clusterCardHeader}>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.sheetTitle, { color: p.text }]}>In this area</Text>
+                    <Text style={[styles.clusterCardSub, { color: p.textSecondary }]}>
+                      {evs.length > 0 ? `${evs.length} event${evs.length === 1 ? '' : 's'}` : ''}
+                      {evs.length > 0 && pls.length > 0 ? '  ·  ' : ''}
+                      {pls.length > 0 ? `${pls.length} place${pls.length === 1 ? '' : 's'}` : ''}
+                    </Text>
+                  </View>
+                  <Pressable onPress={() => setClusterItems(null)} accessibilityLabel="Close">
+                    <Icon sf="xmark.circle.fill" size={24} color={p.textSecondary} />
+                  </Pressable>
+                </View>
+                <ScrollView
+                  style={total > 6 ? styles.clusterList : undefined}
+                  keyboardShouldPersistTaps="handled">
+                  {evs.length > 0 ? (
+                    <Text style={[styles.reviewLabel, { color: p.textSecondary, marginTop: 4 }]}>
+                      EVENTS
+                    </Text>
+                  ) : null}
+                  {evs.map((ev, i) => (
+                    <Pressable
+                      key={`ev-${ev.id}`}
+                      style={[
+                        styles.clusterItemRow,
+                        i > 0 && { borderTopColor: p.separator, borderTopWidth: StyleSheet.hairlineWidth },
+                      ]}
+                      onPress={() => router.push(`/event/${ev.id}`)}>
+                      <View style={[styles.clusterItemDot, { backgroundColor: p.accent }]}>
+                        <Icon sf="pawprint.fill" size={11} color={p.onAccent} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.clusterItemTitle, { color: p.text }]} numberOfLines={1}>
+                          {ev.title}
+                        </Text>
+                        <Text style={[styles.clusterItemMeta, { color: p.textSecondary }]} numberOfLines={1}>
+                          {relDay(ev.startsAt)} · {fmtTime(ev.startsAt)} · {ev.areaLabel}
+                        </Text>
+                      </View>
+                      <Icon sf="chevron.right" size={13} color={p.textSecondary} />
+                    </Pressable>
+                  ))}
+                  {pls.length > 0 ? (
+                    <Text style={[styles.reviewLabel, { color: p.textSecondary, marginTop: evs.length ? 12 : 4 }]}>
+                      DOG-FRIENDLY PLACES
+                    </Text>
+                  ) : null}
+                  {pls.map((pl, i) => (
+                    <Pressable
+                      key={pl.id}
+                      style={[
+                        styles.clusterItemRow,
+                        i > 0 && { borderTopColor: p.separator, borderTopWidth: StyleSheet.hairlineWidth },
+                      ]}
+                      onPress={() => setSelected(pl)}>
+                      <View
+                        style={[
+                          styles.clusterItemDot,
+                          { backgroundColor: CATEGORY_COLORS[pl.category].stroke },
+                        ]}
+                      />
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.clusterItemTitle, { color: p.text }]} numberOfLines={1}>
+                          {pl.name}
+                        </Text>
+                        <Text style={[styles.clusterItemMeta, { color: p.textSecondary }]}>
+                          {CATEGORY_LABELS[pl.category]}
+                        </Text>
+                      </View>
+                      <Icon sf="chevron.right" size={13} color={p.textSecondary} />
+                    </Pressable>
+                  ))}
+                </ScrollView>
+              </Glass>
+            );
+          })()
         ) : (
           <>
             {error ? (
@@ -813,6 +998,26 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
   },
   clusterCount: { fontSize: 14, fontWeight: '800' },
+  clusterCardHeader: { flexDirection: 'row', alignItems: 'flex-start', gap: Spacing.two },
+  clusterCardSub: { fontSize: 13, fontWeight: '600', marginTop: 2 },
+  backToList: { flexDirection: 'row', alignItems: 'center', gap: 3, marginBottom: 6 },
+  backToListText: { fontSize: 13, fontWeight: '700' },
+  clusterList: { maxHeight: 260 },
+  clusterItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
+  },
+  clusterItemDot: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  clusterItemTitle: { fontSize: 15, fontWeight: '700' },
+  clusterItemMeta: { fontSize: 12, marginTop: 1 },
   legendWrap: { position: 'absolute', left: Spacing.three, alignItems: 'flex-start', gap: 8 },
   legendCard: { borderRadius: Radii.md, padding: Spacing.two, gap: 6, overflow: 'hidden' },
   legendRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
