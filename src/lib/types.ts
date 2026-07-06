@@ -8,7 +8,17 @@ export type RsvpStatus =
   | 'declined_by_host'
   | 'cancelled';
 export type RsvpMode = 'open' | 'host_approves';
-export type PetSize = 'S' | 'M' | 'L';
+export type PetSize = 'XS' | 'S' | 'M' | 'L' | 'XL';
+
+export const PET_SIZES: PetSize[] = ['XS', 'S', 'M', 'L', 'XL'];
+
+export const SIZE_LABELS: Record<PetSize, string> = {
+  XS: 'Petite',
+  S: 'Small',
+  M: 'Medium',
+  L: 'Large',
+  XL: 'X-Large',
+};
 export type EventRecurrence = 'weekly' | 'biweekly' | 'monthly';
 
 export interface LatLng {

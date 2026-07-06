@@ -23,7 +23,7 @@ import { Icon } from '@/components/icon';
 import { BottomTabInset, Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
 import { deleteAccount, signOut } from '@/lib/auth';
-import { BREEDS, TEMPERAMENTS } from '@/lib/breeds';
+import { BREEDS, DEFAULT_BREED, TEMPERAMENTS } from '@/lib/breeds';
 import { useBlockActions, useBlockedList } from '@/lib/use-blocks';
 import { pickImage, uploadPublicImage } from '@/lib/storage';
 import { useAddPet, useMyPets, useUpdatePet } from '@/lib/use-pets';
@@ -36,7 +36,7 @@ import {
   myUpcomingEvents,
 } from '@/lib/selectors';
 import { useStore } from '@/lib/store';
-import type { Pet, PetSize } from '@/lib/types';
+import { PET_SIZES, SIZE_LABELS, type Pet, type PetSize } from '@/lib/types';
 
 interface PetForm {
   petId?: string;
@@ -107,6 +107,14 @@ export default function ProfileScreen() {
   const [petForm, setPetForm] = useState<PetForm | null>(null);
   const [uploadingPhoto, setUploadingPhoto] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
+  const [breedOpen, setBreedOpen] = useState(false);
+  const [tempOpen, setTempOpen] = useState(false);
+  const [breedQuery, setBreedQuery] = useState('');
+  const closeDropdowns = () => {
+    setBreedOpen(false);
+    setTempOpen(false);
+    setBreedQuery('');
+  };
 
   const pickAvatar = async () => {
     const uri = await pickImage();
@@ -253,15 +261,19 @@ export default function ProfileScreen() {
             <Chip
               small
               label="Add pet"
-              onPress={() => setPetForm({ name: '', breed: BREEDS[0], size: 'M', temperament: [] })}
+              onPress={() => {
+                closeDropdowns();
+                setPetForm({ name: '', breed: DEFAULT_BREED, size: 'M', temperament: [] });
+              }}
             />
           }>
           {pets.map((pet: Pet) => (
             <Pressable
               key={pet.id}
-              onPress={() =>
-                setPetForm({ petId: pet.id, name: pet.name, breed: pet.breed, size: pet.size, photoUrl: pet.photoUrl, temperament: pet.temperament ?? [] })
-              }
+              onPress={() => {
+                closeDropdowns();
+                setPetForm({ petId: pet.id, name: pet.name, breed: pet.breed, size: pet.size, photoUrl: pet.photoUrl, temperament: pet.temperament ?? [] });
+              }}
               style={[styles.petRow, { backgroundColor: p.card, borderColor: p.separator }]}>
               <Image source={{ uri: pet.photoUrl }} style={styles.petPhoto} />
               <View style={{ flex: 1 }}>
@@ -481,75 +493,144 @@ export default function ProfileScreen() {
             <Text style={[styles.modalTitle, { color: p.text }]}>
               {petForm?.petId ? 'Edit pet' : 'Add a pet'}
             </Text>
-            <Pressable
-              onPress={pickPetPhoto}
-              disabled={uploadingPhoto}
-              accessibilityRole="button"
-              accessibilityLabel="Choose pet photo"
-              style={[styles.petPhotoPick, { borderColor: p.separator }]}>
-              {uploadingPhoto ? (
-                <ActivityIndicator color={p.accent} />
-              ) : petForm?.photoUrl ? (
-                <Image source={{ uri: petForm.photoUrl }} style={styles.petPhotoPreview} />
-              ) : (
-                <Text style={{ color: p.accent, fontWeight: '700', fontSize: 13 }}>Add photo</Text>
-              )}
-            </Pressable>
-            <TextInput
-              value={petForm?.name ?? ''}
-              onChangeText={(t) => setPetForm((f) => (f ? { ...f, name: t } : f))}
-              placeholder="Name"
-              placeholderTextColor={p.textSecondary}
-              style={[styles.modalInput, { color: p.text, borderColor: p.separator }]}
-            />
-            <ScrollView style={{ maxHeight: 170 }}>
-              <View style={styles.breedWrap}>
-                {BREEDS.map((b) => (
+            <ScrollView style={styles.modalBody} keyboardShouldPersistTaps="handled">
+              <Pressable
+                onPress={pickPetPhoto}
+                disabled={uploadingPhoto}
+                accessibilityRole="button"
+                accessibilityLabel="Choose pet photo"
+                style={[styles.petPhotoPick, { borderColor: p.separator }]}>
+                {uploadingPhoto ? (
+                  <ActivityIndicator color={p.accent} />
+                ) : petForm?.photoUrl ? (
+                  <Image source={{ uri: petForm.photoUrl }} style={styles.petPhotoPreview} />
+                ) : (
+                  <Text style={{ color: p.accent, fontWeight: '700', fontSize: 13 }}>Add photo</Text>
+                )}
+              </Pressable>
+              <TextInput
+                value={petForm?.name ?? ''}
+                onChangeText={(t) => setPetForm((f) => (f ? { ...f, name: t } : f))}
+                placeholder="Name"
+                placeholderTextColor={p.textSecondary}
+                style={[styles.modalInput, { color: p.text, borderColor: p.separator }]}
+              />
+
+              {/* Breed dropdown */}
+              <Text style={[styles.modalFieldLabel, { color: p.textSecondary }]}>BREED</Text>
+              <Pressable
+                onPress={() => {
+                  setTempOpen(false);
+                  setBreedOpen((o) => !o);
+                }}
+                style={[styles.dropdownField, { borderColor: p.separator }]}>
+                <Text style={[styles.dropdownValue, { color: p.text }]} numberOfLines={1}>
+                  {petForm?.breed || 'Select a breed'}
+                </Text>
+                <Icon sf={breedOpen ? 'chevron.up' : 'chevron.down'} size={13} color={p.textSecondary} />
+              </Pressable>
+              {breedOpen ? (
+                <View style={[styles.dropdownPanel, { borderColor: p.separator }]}>
+                  <TextInput
+                    value={breedQuery}
+                    onChangeText={setBreedQuery}
+                    placeholder="Search breeds…"
+                    placeholderTextColor={p.textSecondary}
+                    autoCorrect={false}
+                    style={[styles.modalInput, { color: p.text, borderColor: p.separator }]}
+                  />
+                  <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                    {BREEDS.filter((b) =>
+                      b.toLowerCase().includes(breedQuery.trim().toLowerCase()),
+                    ).map((b) => (
+                      <Pressable
+                        key={b}
+                        style={styles.dropdownRow}
+                        onPress={() => {
+                          setPetForm((f) => (f ? { ...f, breed: b } : f));
+                          setBreedOpen(false);
+                          setBreedQuery('');
+                        }}>
+                        <Text
+                          style={{
+                            color: petForm?.breed === b ? p.accent : p.text,
+                            fontWeight: petForm?.breed === b ? '700' : '500',
+                            fontSize: 15,
+                          }}>
+                          {b}
+                        </Text>
+                        {petForm?.breed === b ? (
+                          <Icon sf="checkmark" size={13} color={p.accent} />
+                        ) : null}
+                      </Pressable>
+                    ))}
+                  </ScrollView>
+                </View>
+              ) : null}
+
+              {/* Size */}
+              <Text style={[styles.modalFieldLabel, { color: p.textSecondary }]}>SIZE</Text>
+              <View style={styles.sizeRow}>
+                {PET_SIZES.map((s) => (
                   <Chip
-                    key={b}
+                    key={s}
                     small
-                    label={b}
-                    selected={petForm?.breed === b}
-                    onPress={() => setPetForm((f) => (f ? { ...f, breed: b } : f))}
+                    label={SIZE_LABELS[s]}
+                    selected={petForm?.size === s}
+                    onPress={() => setPetForm((f) => (f ? { ...f, size: s } : f))}
                   />
                 ))}
               </View>
-            </ScrollView>
-            <View style={styles.sizeRow}>
-              {(['S', 'M', 'L'] as PetSize[]).map((s) => (
-                <Chip
-                  key={s}
-                  small
-                  label={s}
-                  selected={petForm?.size === s}
-                  onPress={() => setPetForm((f) => (f ? { ...f, size: s } : f))}
-                />
-              ))}
-            </View>
-            <Text style={[styles.modalFieldLabel, { color: p.textSecondary }]}>TEMPERAMENT</Text>
-            <ScrollView style={{ maxHeight: 120 }}>
-              <View style={styles.breedWrap}>
-                {TEMPERAMENTS.map((t) => (
-                  <Chip
-                    key={t}
-                    small
-                    label={t}
-                    selected={petForm?.temperament.includes(t)}
-                    onPress={() =>
-                      setPetForm((f) =>
-                        f
-                          ? {
-                              ...f,
-                              temperament: f.temperament.includes(t)
-                                ? f.temperament.filter((x) => x !== t)
-                                : [...f.temperament, t],
-                            }
-                          : f,
-                      )
-                    }
-                  />
-                ))}
-              </View>
+
+              {/* Temperament dropdown */}
+              <Text style={[styles.modalFieldLabel, { color: p.textSecondary }]}>TEMPERAMENT</Text>
+              <Pressable
+                onPress={() => {
+                  setBreedOpen(false);
+                  setTempOpen((o) => !o);
+                }}
+                style={[styles.dropdownField, { borderColor: p.separator }]}>
+                <View style={styles.dropdownTags}>
+                  {petForm && petForm.temperament.length > 0 ? (
+                    petForm.temperament.map((t) => (
+                      <View key={t} style={[styles.petTag, { backgroundColor: p.chipBg }]}>
+                        <Text style={[styles.petTagText, { color: p.textSecondary }]}>{t}</Text>
+                      </View>
+                    ))
+                  ) : (
+                    <Text style={{ color: p.textSecondary, fontSize: 15 }}>Add temperament tags</Text>
+                  )}
+                </View>
+                <Icon sf={tempOpen ? 'chevron.up' : 'chevron.down'} size={13} color={p.textSecondary} />
+              </Pressable>
+              {tempOpen ? (
+                <View style={[styles.dropdownPanel, { borderColor: p.separator }]}>
+                  <ScrollView style={{ maxHeight: 180 }} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                    <View style={styles.breedWrap}>
+                      {TEMPERAMENTS.map((t) => (
+                        <Chip
+                          key={t}
+                          small
+                          label={t}
+                          selected={petForm?.temperament.includes(t)}
+                          onPress={() =>
+                            setPetForm((f) =>
+                              f
+                                ? {
+                                    ...f,
+                                    temperament: f.temperament.includes(t)
+                                      ? f.temperament.filter((x) => x !== t)
+                                      : [...f.temperament, t],
+                                  }
+                                : f,
+                            )
+                          }
+                        />
+                      ))}
+                    </View>
+                  </ScrollView>
+                </View>
+              ) : null}
             </ScrollView>
             <View style={styles.modalActions}>
               <Chip label="Cancel" onPress={() => setPetForm(null)} />
@@ -655,7 +736,34 @@ const styles = StyleSheet.create({
     fontSize: 16,
   },
   breedWrap: { flexDirection: 'row', flexWrap: 'wrap', gap: 6 },
-  modalFieldLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginTop: 4 },
-  sizeRow: { flexDirection: 'row', gap: 8 },
+  modalFieldLabel: { fontSize: 11, fontWeight: '700', letterSpacing: 0.8, marginTop: 10, marginBottom: 4 },
+  modalBody: { maxHeight: 400 },
+  dropdownField: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 8,
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radii.md,
+    paddingHorizontal: 12,
+    paddingVertical: 11,
+  },
+  dropdownValue: { flex: 1, fontSize: 15, fontWeight: '600' },
+  dropdownTags: { flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 5 },
+  dropdownPanel: {
+    borderWidth: StyleSheet.hairlineWidth,
+    borderRadius: Radii.md,
+    marginTop: 6,
+    padding: 6,
+    gap: 6,
+  },
+  dropdownRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 8,
+    paddingVertical: 11,
+  },
+  sizeRow: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   modalActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
 });
