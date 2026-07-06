@@ -79,7 +79,7 @@ email/password is a placeholder for SSO. Milestone mapping lives in [SPEC.md §9
 ## EPIC 5 — Post / Host an Event  🟢
 - [x] Address autocomplete in the Where step — Nominatim suggestions → real pin; posted/edited events get real coords (#32)
 - [x] Real cover-photo upload — Storage foundation (public `photos` bucket + RLS, `uploadPublicImage`/`pickImage`, #29) + Upload tile in the Post wizard (#30); placedog presets kept as quick options
-- [~] Edit event — hosts edit their event via the Post wizard (#31, RLS host-only); notifying attendees of changes needs push (Epic 8), and address relocation is a follow-up
+- [x] Edit event — hosts edit their event via the Post wizard (#31); attendees get an in-app "event updated" notification on save (#41). Push delivery + address relocation are follow-ups
 - [x] Host dashboard: attendee + pet list, headcount incl. dogs — `manage/[id]` screen with status groups + inline approve/decline (#33)
 - [x] Recurring events (weekly / biweekly / monthly) — recurrence option in the post wizard; auto-advances to the next occurrence instead of archiving
 
