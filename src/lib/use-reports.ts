@@ -2,7 +2,7 @@ import { useMutation } from '@tanstack/react-query';
 
 import { supabase } from './supabase';
 
-export type ReportTarget = 'event' | 'user' | 'comment';
+export type ReportTarget = 'event' | 'user' | 'comment' | 'review';
 
 async function currentUserId(): Promise<string> {
   const {
