@@ -66,7 +66,7 @@ email/password is a placeholder for SSO. Milestone mapping lives in [SPEC.md §9
 - [x] Real relative timestamps instead of "Just now" — `timeAgo` on real reviews (#26)
 - [x] Show review count next to the star rating — "N reviews" in the place sheet (#26)
 - [x] Attach a photo to a review — `place_reviews.photo_url` + composer photo picker; renders in review rows (#37)
-- [ ] Report / flag a review (ties into moderation epic) — extend the report flow with a `'review'` target
+- [x] Report / flag a review — `'review'` report target + flag action on community reviews → moderation queue (#46)
 
 ## EPIC 4 — Discovery / Search  🟢 ⭐
 - [x] "Has spots left" toggle — already in the filter sheet
