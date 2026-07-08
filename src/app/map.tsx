@@ -53,6 +53,7 @@ import { buildIndex, pointDisplays, type ClusterPoint } from '@/lib/cluster';
 import { DEFAULT_FILTERS } from '@/lib/filters';
 import { pickImage, uploadPublicImage } from '@/lib/storage';
 import { useDiscoverEvents } from '@/lib/use-events';
+import { useReportContent } from '@/lib/use-reports';
 import { useCurrentUserId } from '@/lib/use-rsvps';
 import { useStore } from '@/lib/store';
 
@@ -288,6 +289,7 @@ export default function MapScreen() {
   const addReview = useAddPlaceReview();
   const updateReview = useUpdatePlaceReview();
   const deleteReviewMut = useDeletePlaceReview();
+  const report = useReportContent();
   const demoList = selected ? demoReviews(selected, reviewers) : [];
   const reviews = selected ? mergeReviews(community, demoList, myId) : [];
   const rating = selected ? blendedRating(placeRating(selected), demoList.length, community) : 0;
@@ -348,6 +350,23 @@ export default function MapScreen() {
       },
     ]);
   };
+
+  const reportReview = (reviewId: string) =>
+    Alert.alert('Report this review?', 'Our team will review it.', [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Report',
+        style: 'destructive',
+        onPress: () =>
+          report.mutate(
+            { targetType: 'review', targetId: reviewId },
+            {
+              onSuccess: () => Alert.alert('Thanks for the report', 'We’ll take a look.'),
+              onError: (e) => Alert.alert('Could not report', (e as Error).message),
+            },
+          ),
+      },
+    ]);
 
   return (
     <View style={styles.screen}>
@@ -650,6 +669,14 @@ export default function MapScreen() {
                         <Icon sf="trash" size={16} color={p.danger} />
                       </Pressable>
                     </View>
+                  ) : r.reviewId ? (
+                    <Pressable
+                      onPress={() => reportReview(r.reviewId!)}
+                      hitSlop={8}
+                      accessibilityRole="button"
+                      accessibilityLabel="Report this review">
+                      <Icon sf="flag" size={15} color={p.textSecondary} />
+                    </Pressable>
                   ) : null}
                 </View>
               ))}

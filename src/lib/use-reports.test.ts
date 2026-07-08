@@ -45,6 +45,18 @@ describe('reportContent', () => {
     );
   });
 
+  it('reports a review target', async () => {
+    auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } } });
+    const insert = vi.fn().mockResolvedValue({ error: null });
+    from.mockReturnValue({ insert });
+
+    await reportContent('review', 'way-123', 'spam');
+
+    expect(insert).toHaveBeenCalledWith(
+      expect.objectContaining({ target_type: 'review', target_id: 'way-123', reason: 'spam' }),
+    );
+  });
+
   it('throws when signed out', async () => {
     auth.getUser.mockResolvedValue({ data: { user: null } });
     await expect(reportContent('user', 'x')).rejects.toThrow('Not signed in');
