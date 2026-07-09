@@ -108,7 +108,7 @@ email/password is a placeholder for SSO. Milestone mapping lives in [SPEC.md §9
 
 ## EPIC 10 — Profiles & Badges  🟢
 - [x] Pet profile screen (photo, breed, size, temperament tags) — pets shown on the user profile (#27), photo upload (#29), and editable temperament tags on add/edit (#40)
-- [ ] Achievement badges: First Meetup, Host, 5 Events, Breed Ambassador
+- [x] Achievement badges — 8 badges (`computeAchievements`, derived from activity, unit-tested) rendered as interactive 3D **dog collars**: `expo-gl`+`three` single-canvas grid, extruded-ring straps with painted nylon/stripe/spot textures, assorted metal buckles with a clip seam, ice-cream colors, accelerometer tilt, drag/tap spin (`src/components/achievements.tsx`, #achievements-3d)
 - [x] Tap attendee badge → mini profile — user profile screen from attendee strips, comment authors, and the event host (#27, #28), with report/block
 
 ## EPIC 11 — Trust, Safety & Moderation  🟢 (launch-critical for a UGC app)
