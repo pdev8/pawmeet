@@ -133,8 +133,26 @@ the Cancel + red-confirm dialog), the floating Glass back button pattern on push
 detail screens (`event`/`user`/`manage`), plus `Glass`, `Chip`, `Icon`, `OwnerPetBadge`,
 `EmptyState`. Native deps (all Expo Go–bundled or pure-JS, installed via
 `npx expo install`): `expo-image-picker` + `expo-calendar` (calendar via `src/lib/calendar.ts`),
-`supercluster` (map clustering, `src/lib/cluster.ts`), and `react-native-gesture-handler`
-with `GestureHandlerRootView` wrapping the app in `app/_layout.tsx`.
+`supercluster` (map clustering, `src/lib/cluster.ts`), `expo-sensors` (accelerometer tilt),
+`expo-gl` + `three` + `expo-three` (the 3D achievements, below), and
+`react-native-gesture-handler` with `GestureHandlerRootView` wrapping the app in `app/_layout.tsx`.
+
+**Achievements = 3D dog collars (`src/components/achievements.tsx`).** Epic 10.
+`src/lib/achievements.ts` (`computeAchievements(stats)`, unit-tested) derives 8 badges
+from existing activity — no DB. The grid renders every collar in ONE `expo-gl`
+`GLView` canvas with `three` (via `expo-three`'s `Renderer`): each collar is an
+extruded ring (real thickness) with a painted **texture** for stripes/spots (a
+`DataTexture` with a nylon crosshatch + shading gradient — patterns are visual, never
+extra meshes), an assorted metal buckle (silver/gold/bronze/wood) that wraps the band
+with a 4:5 clip seam + release tabs, ice-cream colors, accelerometer tilt, and
+drag/tap spin. Icons + labels are crisp RN overlays (`Animated` `rotateY` synced to
+each collar's spin). Gotchas that cost real time: (1) the scene is built once in
+`onContextCreate`, so a `SCENE_VERSION` constant is wired into the mesh-`rebuild()`
+effect deps to force rebuilds on Fast Refresh — bump it on any geometry/material
+edit, else changes only show on a full reload; (2) `MeshStandardMaterial` metals near
+`metalness: 1` render black without an env map — keep metalness ≤ ~0.5; (3) the spin
+is velocity-only (the loop coasts every collar with friction) and the pan spins every
+collar crossed between frames, so fast swipes across the row don't skip collars.
 
 **Web preview.** The app is iOS-first, but `metro.config.js` adds a web-only
 resolver (react-native-maps → empty, zustand → CJS build) and `map.web.tsx` is a

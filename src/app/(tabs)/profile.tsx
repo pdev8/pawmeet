@@ -18,8 +18,10 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { Chip } from '@/components/chip';
+import { AchievementsGrid } from '@/components/achievements';
 import { EventRow } from '@/components/event-row';
 import { SwipeableRow } from '@/components/swipeable-row';
+import { computeAchievements } from '@/lib/achievements';
 import { Icon } from '@/components/icon';
 import { BottomTabInset, Fonts, Radii, Spacing } from '@/constants/theme';
 import { usePalette } from '@/hooks/use-palette';
@@ -172,18 +174,13 @@ export default function ProfileScreen() {
     (r) => r.userId === me.id && r.status === 'going',
   ).length;
 
-  const achievements = [
-    { sf: 'pawprint.fill', label: 'First Meetup', earned: attendedPast >= 1 },
-    { sf: 'house.fill', label: 'Host', earned: hostedTotal >= 1 },
-    { sf: 'star.fill', label: '5 Events', earned: rsvpTotal >= 5 },
-    {
-      sf: 'crown.fill',
-      label: 'Breed Ambassador',
-      earned: Object.values(store.events).some(
-        (e) => e.hostId === me.id && e.breedFocus,
-      ),
-    },
-  ];
+  const achievements = computeAchievements({
+    attended: attendedPast,
+    hosted: hostedTotal,
+    going: rsvpTotal,
+    pets: pets.length,
+    breedFocusHosted: Object.values(store.events).some((e) => e.hostId === me.id && !!e.breedFocus),
+  });
 
   const savePet = () => {
     if (!petForm) return;
@@ -248,25 +245,7 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        <View style={styles.badgeRow}>
-          {achievements.map((a) => (
-            <View
-              key={a.label}
-              style={[
-                styles.badge,
-                { backgroundColor: a.earned ? p.accentSoft : p.chipBg, opacity: a.earned ? 1 : 0.45 },
-              ]}>
-              <Icon sf={a.sf} size={18} color={a.earned ? p.accent : p.textSecondary} />
-              <Text
-                style={[
-                  styles.badgeLabel,
-                  { color: a.earned ? p.text : p.textSecondary },
-                ]}>
-                {a.label}
-              </Text>
-            </View>
-          ))}
-        </View>
+        <AchievementsGrid items={achievements} />
 
         <Section
           title="MY PETS"
@@ -678,15 +657,6 @@ const styles = StyleSheet.create({
   nameRow: { flexDirection: 'row', alignItems: 'center', gap: 8 },
   meName: { fontSize: 26, fontWeight: '800', fontFamily: Fonts?.rounded },
   meArea: { fontSize: 14 },
-  badgeRow: { flexDirection: 'row', gap: Spacing.two },
-  badge: {
-    flex: 1,
-    alignItems: 'center',
-    gap: 4,
-    paddingVertical: Spacing.two,
-    borderRadius: Radii.md,
-  },
-  badgeLabel: { fontSize: 10, fontWeight: '700', textAlign: 'center' },
   section: { gap: Spacing.two },
   sectionHeader: {
     flexDirection: 'row',
